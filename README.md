@@ -5,15 +5,16 @@ disclosure filings.
 
 - **`src/api/`** — FastAPI service (Python 3.12, managed with `uv`)
 - **`web/`** — React SPA (Vite + TypeScript + TanStack Router/Query, shadcn/ui)
-- **`compose.yml`** — Postgres and Redis for local development
+- **`src/jobs/`** — BullMQ queues and the worker that drains them
+- **`compose.yml`** — Postgres for local development
 
 ## Getting started
 
 With [`just`](https://just.systems):
 
 ```bash
-just setup    # .env, dependencies, Postgres + Redis
-just dev      # API on :8000 and web on :5173
+just setup    # .env, dependencies, Postgres
+just dev      # API on :8000, web on :5173, worker on every queue
 just --list   # every recipe
 ```
 
@@ -21,7 +22,7 @@ The raw commands behind those recipes are below.
 
 ```bash
 cp .env.example .env      # fill in Azure DI / R2 credentials
-docker compose up -d      # Postgres + Redis
+docker compose up -d      # Postgres
 ```
 
 ### API
@@ -36,6 +37,9 @@ Interactive docs at http://localhost:8000/docs.
 | Endpoint | Description |
 | --- | --- |
 | `GET /health` | Liveness check |
+| `GET /queues` | Queue names |
+| `GET /queues/{queue}` | Job counts per state |
+| `POST /queues/{queue}/jobs` | Enqueue a job |
 
 Add feature routers under `src/api/routers/` and register them in
 `src/api/main.py`.
@@ -53,6 +57,47 @@ development. To point at a deployed API instead, set `VITE_API_URL`.
 
 Other scripts: `npm run build` (typecheck + production build), `npm run lint`,
 `npm run preview`.
+
+## Background jobs
+
+Queues run on [BullMQ](https://docs.bullmq.io)'s PostgreSQL backend, so the same
+Postgres instance carries both application data and the queue — no Redis. BullMQ
+owns the `bullmq` schema (`QUEUE_SCHEMA`); it replaces the Redis key prefix, and
+`opts["prefix"]` is rejected for that reason.
+
+```bash
+just worker              # every queue
+just worker filings      # one queue
+just queue-migrate       # apply the schema ahead of time (optional)
+```
+
+Migrations are applied lazily the first time a queue or worker touches the
+database. They are idempotent and advisory-locked, so several processes can
+start at once; `just queue-migrate` exists for deploys that would rather run
+DDL as a separate step.
+
+```
+src/jobs/
+  queues.py      queue names + connection options; get_queue() / close_queues()
+  processors.py  PROCESSORS: queue -> job name -> async handler
+  worker.py      entrypoint (python -m jobs.worker); drains on SIGTERM
+  migrate.py     explicit schema migration
+```
+
+To add work: name the queue in `queues.py`, write an `async def handler(job)` in
+`processors.py`, and register it under that queue in `PROCESSORS`. Producers
+enqueue with `await get_queue(FILINGS).add("parse-filing", {...})`, or over HTTP:
+
+```bash
+curl -X POST localhost:8000/queues/filings/jobs \
+  -H 'content-type: application/json' \
+  -d '{"name": "parse-filing", "data": {"source_url": "s3://…/filing.pdf"}}'
+```
+
+A handler that raises is retried per the job's `attempts`/`backoff` options;
+raising `UnrecoverableError` fails it outright, which is what an unknown job
+name does. Throughput is roughly 1.5–2× lower than the Redis backend — the cost
+of durable transactional writes — which is well within budget for this pipeline.
 
 ## Frontend layout
 

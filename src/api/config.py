@@ -17,6 +17,11 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://postgres:password@localhost:5432/postgres"
 
+    # Postgres schema BullMQ owns; it replaces the Redis key prefix.
+    queue_schema: str = "bullmq"
+    # Jobs a single worker process runs at a time.
+    queue_concurrency: int = 4
+
     r2_account_id: str = ""
     r2_access_key_id: str = ""
     r2_secret_access_key: str = ""

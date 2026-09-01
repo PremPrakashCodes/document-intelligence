@@ -21,11 +21,11 @@ setup: install services-up
 
 # --- services ---
 
-# Start Postgres and Redis
+# Start Postgres
 services-up:
     docker compose up -d
 
-# Stop Postgres and Redis
+# Stop Postgres
 services-down:
     docker compose down
 
@@ -43,18 +43,33 @@ api:
 web:
     cd web && npm run dev -- --port {{ web_port }}
 
-# Run the API and web dev servers together
+# Run the BullMQ worker (all queues, or the ones named)
+worker *queues:
+    uv run python -m jobs.worker {{ queues }}
+
+# Run the API, web, and worker processes together
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
     trap 'kill 0' EXIT INT TERM
     just api &
     just web &
+    just worker &
     wait
 
 # Open the interactive API docs
 docs:
     open http://localhost:{{ api_port }}/docs
+
+# --- queues ---
+
+# Apply the BullMQ Postgres schema (queues also do this lazily on first use)
+queue-migrate:
+    uv run python -m jobs.migrate
+
+# Job counts for a queue
+queue-counts queue="filings":
+    curl -fsS http://localhost:{{ api_port }}/queues/{{ queue }}
 
 # --- checks ---
 

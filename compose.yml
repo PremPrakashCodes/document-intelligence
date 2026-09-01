@@ -1,6 +1,7 @@
 services:
   postgres:
-    image: postgres:latest
+    # Pinned: postgres:latest jumping a major version orphans the data volume.
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -9,7 +10,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      # 18+ images want the whole directory mounted, not .../data — they keep
+      # a major-version subdirectory under it so pg_upgrade can work in place.
+      - db_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
