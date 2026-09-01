@@ -1,0 +1,11 @@
+[project]
+name = "insurer-public-disclosure"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bullmq>=3.2.1",
+    "fastapi[standard]>=0.141.1",
+    "pydantic-settings>=2.15.0",
+]
