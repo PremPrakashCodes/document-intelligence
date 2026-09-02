@@ -5,6 +5,16 @@ from. Click a cell in the extracted table and see it highlighted in the original
 — the exact characters, at the exact coordinates, with the source that produced
 them.
 
+![The document viewer: the original PDF on the left, the extracted table on the right, and the provenance of the selected cell below](docs/images/document-viewer.png)
+
+Selecting a cell zooms the page to it and shows both readings side by side. The
+cell below is a nil marker: a right-aligned dash straddling a column rule that
+Azure DI returned nothing for. PyMuPDF has it, 68% of the glyph sits inside the
+cell, and the PDF's own text is what the reviewer sees — with the disagreement
+recorded rather than hidden.
+
+![A nil dash Azure DI dropped, recovered from the PDF text layer and shown with both readings](docs/images/cell-provenance.png)
+
 The repository also still carries the filings-collection pipeline this started
 as, on its own `filings` queue.
 
@@ -250,6 +260,9 @@ name does. Throughput is roughly 1.5–2× lower than the Redis backend — the 
 of durable transactional writes — which is well within budget for this pipeline.
 
 ## Frontend layout
+
+![The document library: upload, then every file with its extraction status](docs/images/documents-list.png)
+
 
 ```
 web/src/
