@@ -15,3 +15,6 @@ wheels/
 # Node
 node_modules/
 dist/
+
+# Sample PDF (purged from history, keep untracked)
+nl-1.pdf
