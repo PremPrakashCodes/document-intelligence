@@ -46,3 +46,19 @@ export const pageWordsQuery = (documentId: string, pageNumber: number) =>
     queryFn: () => api.getPage(documentId, pageNumber, ['words']),
     staleTime: Infinity,
   })
+
+/**
+ * Text blocks with their lines, spans, and coordinates - what the full-page
+ * view rebuilds the page from. `words` is deliberately left out: the block
+ * tree already carries every character, and asking for both would double the
+ * largest part of the response.
+ *
+ * `include` filters the *content* blob only; the page's plain text is its own
+ * column and comes back either way, so asking for it here is an error.
+ */
+export const pageBlocksQuery = (documentId: string, pageNumber: number) =>
+  queryOptions({
+    queryKey: [...documentKeys.page(documentId, pageNumber), 'blocks'],
+    queryFn: () => api.getPage(documentId, pageNumber, ['blocks']),
+    staleTime: Infinity,
+  })

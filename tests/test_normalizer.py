@@ -4,6 +4,7 @@ import pytest
 
 from extraction.errors import AzureRateLimitError, InvalidPdfError
 from extraction.geometry import BBox
+from extraction.matcher import strip_selection_marks
 from extraction.pipeline import ExtractionPipeline
 from extraction.types import DocumentStatus, MatchMethod, Source
 
@@ -76,11 +77,13 @@ class TestProvenance:
         for table in canonical.tables:
             for cell in table.cells:
                 assert cell.azure_text is not None
-                # The chosen text always equals one of the two sources.
+                # The chosen text always equals one of the two sources - with
+                # Azure's checkbox markers stripped, which is the one edit this
+                # pipeline makes to a reading it was given.
                 if cell.text_source.source is Source.PYMUPDF:
                     assert cell.text == cell.pymupdf_text
                 else:
-                    assert cell.text == cell.azure_text
+                    assert cell.text == strip_selection_marks(cell.azure_text)
 
     def test_matched_cells_carry_a_highlight_box(self, canonical):
         matched = [c for t in canonical.tables for c in t.cells if c.text_source.matched]
@@ -93,21 +96,43 @@ class TestProvenance:
         """The end-to-end quality number, pinned so a regression is visible."""
         stats = canonical.extraction.matching
         assert stats.total_cells == 714
-        assert stats.empty_cells == 193
-        assert stats.content_cells == 521
+        # 193 cells neither source read, plus the two whose only Azure content
+        # was a checkbox marker over an empty box.
+        assert stats.empty_cells == 195
+        assert stats.content_cells == 519
         assert stats.matched_cells == 519
-        assert stats.match_rate > 0.99
+        assert stats.unmatched_cells == 0
+        assert stats.match_rate == 1.0
 
-    def test_the_only_unmatched_cells_are_azure_selection_marks(self, canonical):
-        """Azure reports checkbox state, which has no PDF text by definition -
-        so these are correct outcomes, not extraction failures."""
+    def test_azure_selection_marks_do_not_become_cell_values(self, canonical):
+        """Azure reports checkbox state as the literal text `:unselected:`.
+
+        On a ruled filing schedule the detector fires on empty boxes, so left
+        in it would put `:unselected:` in front of a reviewer as the value of a
+        cell the document shows as blank. The raw reading is kept on
+        `azure_text`; the cell itself reads empty, which is what the PDF says.
+        """
+        # Matched on the marker, not on a bare colon: real cells contain one
+        # ("Add/Less :-"), and they are not what this is about.
+        marked = [
+            c
+            for t in canonical.tables
+            for c in t.cells
+            if ":unselected:" in c.azure_text or ":selected:" in c.azure_text
+        ]
+        assert [c.azure_text for c in marked] == [":unselected:", ":unselected:"]
+        assert all(c.text == "" for c in marked)
+        assert all(not c.pymupdf_text for c in marked)
+
+    def test_no_populated_cell_is_left_unmatched(self, canonical):
+        """With the markers out of the way, every cell holding text matches."""
         unmatched = [
             c
             for t in canonical.tables
             for c in t.cells
-            if not c.text_source.matched and (c.azure_text.strip() or (c.pymupdf_text or "").strip())
+            if not c.text_source.matched and (c.text.strip() or (c.pymupdf_text or "").strip())
         ]
-        assert [c.azure_text for c in unmatched] == [":unselected:", ":unselected:"]
+        assert unmatched == []
 
     def test_recovers_nil_dashes_azure_dropped(self, canonical):
         """The regression that drove the containment rule: 148 right-aligned

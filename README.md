@@ -137,9 +137,11 @@ non-overlapping grid. IoU measures cell padding, not match quality: 148 nil-mark
 dashes in `nl-1.pdf` sit perfectly inside 30pt-wide columns and score an IoU of
 0.05. Grading on IoU discarded all of them in favour of Azure's empty string.
 
-On the sample filing: **519 of 521 populated cells (99.6%)** resolve against the
-PDF text layer. The two that do not are Azure `:unselected:` selection marks,
-which have no PDF text by definition.
+On the sample filing: **all 519 populated cells (100%)** resolve against the PDF
+text layer. Azure's `:selected:` / `:unselected:` checkbox markers are stripped
+before a cell's value is chosen — they are state, not text, and the detector
+fires on the empty boxes a ruled schedule is full of — so those cells read as
+the blanks the document shows. The raw reading is kept on `azure_text`.
 
 If Azure fails, the document is saved as `partial` — text, coordinates, and
 metadata intact, tables missing, the error recorded — and

@@ -137,6 +137,23 @@
     0 8px 28px oklch(0 0 0 / 0.5);
 }
 
+/**
+ * The rebuilt page: ink and rules on that same white sheet.
+ *
+ * These cannot be theme tokens. `.page-surface` pins the paper to white in
+ * both themes because the document is the evidence, so the text drawn on it
+ * has to be pinned to dark too - `--foreground` would turn the whole page
+ * invisible the moment the app is in dark mode.
+ */
+.page-ink {
+  color: oklch(0.18 0.012 258);
+}
+/* The extracted grid, drawn over the page's own characters: visible enough to
+   read the structure, faint enough not to compete with the text under it. */
+.page-ink .cell-rule {
+  border-color: oklch(0.55 0.03 258 / 0.4);
+}
+
 /* Keyboard focus must always be visible; the ring token carries it. */
 @media (prefers-reduced-motion: reduce) {
   *,

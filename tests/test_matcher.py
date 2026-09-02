@@ -72,12 +72,33 @@ class TestMatchCell:
         assert match.pymupdf_text == "₹25,000"
 
     def test_empty_cell_falls_back_to_azure(self, simple_matcher):
-        match = simple_matcher.match_cell(BBox(10, 10, 100, 25), ":unselected:", WordIndex([]))
+        match = simple_matcher.match_cell(BBox(10, 10, 100, 25), "Sub-total", WordIndex([]))
         assert match.source.method is MatchMethod.NONE
         assert match.source.source is Source.AZURE_DI
-        assert match.text == ":unselected:"
+        assert match.text == "Sub-total"
         assert match.pymupdf_text is None
         assert match.source.bbox is None
+
+    def test_a_checkbox_marker_is_not_a_value(self, simple_matcher):
+        """Azure's `:unselected:` is state, and the detector fires on the empty
+        boxes a ruled schedule is full of. The cell reads empty; the raw
+        reading survives on the cell's `azure_text`, which this layer sets."""
+        match = simple_matcher.match_cell(BBox(10, 10, 100, 25), ":unselected:", WordIndex([]))
+        assert match.text == ""
+        assert match.pymupdf_text is None
+
+    def test_a_marker_beside_real_text_keeps_the_text(self, simple_matcher):
+        match = simple_matcher.match_cell(BBox(10, 10, 100, 25), ":selected: Yes", WordIndex([]))
+        assert match.text == "Yes"
+
+    def test_a_marker_does_not_block_an_exact_match(self, simple_matcher):
+        """The PDF spells out `Yes`; Azure prefixes it with the checkbox it
+        found. Comparing against the raw content would grade this SPATIAL and
+        report a discrepancy that is not one."""
+        index = WordIndex([word("Yes", (12, 12, 40, 20))])
+        match = simple_matcher.match_cell(BBox(10, 10, 100, 25), ":selected: Yes", index)
+        assert match.source.method is MatchMethod.EXACT
+        assert match.text == "Yes"
 
     def test_a_word_mostly_outside_the_cell_is_ignored(self, simple_matcher):
         # Only 20% of this word lies inside, below the 0.55 membership bar.

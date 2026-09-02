@@ -39,6 +39,10 @@ the *matched words' union* that lies inside the cell:
 * `NONE`    - no words inside the cell: a scanned page, or an empty cell.
               Azure text wins.
 
+Azure's `:selected:` / `:unselected:` checkbox markers are stripped before any
+of this: they are state, not content, and the detector fires on the empty boxes
+a ruled filing schedule is full of. See `strip_selection_marks`.
+
 Why containment and not IoU
 ---------------------------
 IoU between a cell and its text is not a measure of match quality - it is a
@@ -96,6 +100,26 @@ def normalize_text(value: str) -> str:
     anything else.
     """
     return _WHITESPACE.sub(" ", unicodedata.normalize("NFKC", value)).strip()
+
+
+_SELECTION_MARK = re.compile(r":(?:un)?selected:")
+
+
+def strip_selection_marks(value: str) -> str:
+    """Drop Azure's checkbox markers from a cell's content.
+
+    Azure DI reports a detected checkbox as the literal text `:selected:` or
+    `:unselected:`. That is *state*, not the cell's text - and on a ruled
+    filing schedule the detector fires on empty boxes, so the marker is
+    routinely the only "content" a genuinely blank cell has. Left in, it
+    reaches the reviewer as a value: a column of `:unselected:` where the
+    document shows nothing at all.
+
+    Stripping happens where the cell's text is *chosen*, never where Azure's
+    reading is *recorded*: `azure_text` keeps the raw content, so the marker
+    is still auditable and nothing this pipeline was told is discarded.
+    """
+    return _WHITESPACE.sub(" ", _SELECTION_MARK.sub(" ", value)).strip()
 
 
 def _comparable(value: str) -> str:
@@ -198,11 +222,15 @@ class TableMatcher:
     def match_cell(self, cell_bbox: BBox, azure_text: str, index: WordIndex) -> CellMatch:
         """Resolve one cell's text and record how the decision was made."""
         words, words_bbox = self.match_text_to_cell(cell_bbox, index)
+        # Azure's checkbox markers are state, not text, so they take no part in
+        # either the fallback value or the comparison. A cell whose only Azure
+        # content was a marker is an empty cell.
+        azure_content = strip_selection_marks(azure_text)
 
         if not words or words_bbox is None:
             # Nothing in the text layer here: a scanned page, or an empty cell.
             return CellMatch(
-                text=azure_text,
+                text=azure_content,
                 pymupdf_text=None,
                 source=TextSource(
                     source=Source.AZURE_DI,
@@ -219,7 +247,7 @@ class TableMatcher:
         containment = calculate_overlap(words_bbox, cell_bbox)
         iou = calculate_iou(cell_bbox, words_bbox)
 
-        if _comparable(pymupdf_text) == _comparable(azure_text):
+        if _comparable(pymupdf_text) == _comparable(azure_content):
             method = MatchMethod.EXACT
         elif containment >= self.cell_containment_threshold:
             method = MatchMethod.SPATIAL
@@ -233,7 +261,7 @@ class TableMatcher:
         prefer_pymupdf = method in (MatchMethod.EXACT, MatchMethod.SPATIAL)
 
         return CellMatch(
-            text=normalize_text(pymupdf_text) if prefer_pymupdf else azure_text,
+            text=normalize_text(pymupdf_text) if prefer_pymupdf else azure_content,
             pymupdf_text=normalize_text(pymupdf_text),
             source=TextSource(
                 source=Source.PYMUPDF if prefer_pymupdf else Source.AZURE_DI,

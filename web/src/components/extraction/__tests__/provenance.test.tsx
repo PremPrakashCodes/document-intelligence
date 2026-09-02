@@ -99,9 +99,9 @@ describe('CellDetails', () => {
 
   it('says when the PDF had no text for the cell', () => {
     const cell = makeCell({
-      text: ':unselected:',
+      text: '1,25,000',
       pymupdf_text: null,
-      azure_text: ':unselected:',
+      azure_text: '1,25,000',
       confidence: null,
       text_source: {
         source: 'azure_di',

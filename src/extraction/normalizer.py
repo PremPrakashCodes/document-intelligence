@@ -20,7 +20,7 @@ from extraction.geometry import (
     scale_bbox,
     union_bbox,
 )
-from extraction.matcher import TableMatcher
+from extraction.matcher import TableMatcher, strip_selection_marks
 from extraction.types import (
     DocumentInfo,
     Extraction,
@@ -156,7 +156,7 @@ class DocumentNormalizer:
                         row_span=azure_cell.row_span,
                         column_span=azure_cell.column_span,
                         kind=azure_cell.kind,
-                        text=azure_cell.content,
+                        text=strip_selection_marks(azure_cell.content),
                         azure_text=azure_cell.content,
                         pymupdf_text=None,
                         bbox=(0.0, 0.0, 0.0, 0.0),
@@ -247,13 +247,17 @@ def summarize_matching(pages: list[Page]) -> MatchingStats:
     A cell is "empty" when neither source found text in it. Those are excluded
     from the match rate - see `MatchingStats` for why that distinction is what
     makes the number readable.
+
+    Emptiness is read off the *chosen* text rather than the raw `azure_text`,
+    so a cell whose only Azure content was a stripped checkbox marker counts as
+    the blank it is instead of as a populated cell nobody could match.
     """
     total = empty = matched = exact = spatial = 0
     for page in pages:
         for table in page.tables:
             for cell in table.cells:
                 total += 1
-                if not cell.azure_text.strip() and not (cell.pymupdf_text or "").strip():
+                if not cell.text.strip() and not (cell.pymupdf_text or "").strip():
                     empty += 1
                     continue
                 method = cell.text_source.method

@@ -153,7 +153,7 @@ describe('TableViewer', () => {
           makeCell({
             row: 0,
             column: 0,
-            text: ':unselected:',
+            text: '1,25,000',
             pymupdf_text: null,
             text_source: {
               source: 'azure_di',

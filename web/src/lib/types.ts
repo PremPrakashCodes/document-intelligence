@@ -105,12 +105,38 @@ export interface PageWord {
   word: number
 }
 
+/** A run of characters sharing one font, size, and style. */
+export interface PageSpan {
+  text: string
+  bbox: BBox
+  font: string
+  size: number
+  /** PyMuPDF's packed style bits - see `SPAN_FLAG` in `pageFlow.ts`. */
+  flags: number
+  color: number
+}
+
+export interface PageLine {
+  bbox: BBox
+  /** Writing direction as a unit vector; `[1, 0]` is normal left-to-right. */
+  direction: [number, number]
+  spans: PageSpan[]
+}
+
+/** A text or image block, in PyMuPDF's own block order. */
+export interface PageBlock {
+  number: number
+  type: 'text' | 'image'
+  bbox: BBox
+  lines?: PageLine[]
+}
+
 export interface PageDetail {
   page_number: number
   geometry: PageGeometry
   has_text_layer: boolean
   text: string
-  content: { words?: PageWord[]; [key: string]: unknown }
+  content: { words?: PageWord[]; blocks?: PageBlock[]; [key: string]: unknown }
   table_ids: string[]
 }
 

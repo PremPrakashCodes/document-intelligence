@@ -1,6 +1,14 @@
 /** Fixtures shaped like the real nl-1.pdf extraction. */
 
-import type { PageGeometry, TableCell, TableDetail, TableSummary } from '@/lib/types'
+import type {
+  PageBlock,
+  PageGeometry,
+  PageLine,
+  PageSpan,
+  TableCell,
+  TableDetail,
+  TableSummary,
+} from '@/lib/types'
 
 export const geometry: PageGeometry = {
   width: 841.68,
@@ -92,4 +100,48 @@ export const tableSummary: TableSummary = {
   confidence: 0.99,
   continues_table_id: null,
   cell_count: 9,
+}
+
+// --- page content ------------------------------------------------------------
+
+/** PyMuPDF's bold style bit, the one the renderers actually read. */
+export const BOLD = 16
+
+export function makeSpan(text: string, overrides: Partial<PageSpan> = {}): PageSpan {
+  return {
+    text,
+    bbox: [0, 0, text.length * 5, 10],
+    font: 'Helvetica',
+    size: 10,
+    flags: 0,
+    color: 0,
+    ...overrides,
+  }
+}
+
+export function makeLine(
+  text: string,
+  bbox: PageLine['bbox'],
+  spanOverrides: Partial<PageSpan> = {},
+): PageLine {
+  return {
+    bbox,
+    direction: [1, 0],
+    spans: [makeSpan(text, { bbox, ...spanOverrides })],
+  }
+}
+
+/** A one-line text block, which is what most page assertions need. */
+export function makeBlock(
+  number: number,
+  text: string,
+  bbox: PageBlock['bbox'],
+  spanOverrides: Partial<PageSpan> = {},
+): PageBlock {
+  return {
+    number,
+    type: 'text',
+    bbox,
+    lines: [makeLine(text, bbox, spanOverrides)],
+  }
 }

@@ -133,18 +133,36 @@ Measured on `nl-1.pdf`:
 | --- | --- |
 | IoU ≥ 0.35 | 369 / 521 (70.8%) |
 | containment ≥ 0.8 | 513 / 521 (98.5%) |
-| containment ≥ 0.55 (shipped) | **519 / 521 (99.6%)** |
+| containment ≥ 0.55 (shipped) | **519 / 519 (100%)** |
 
-The two remaining cells are Azure `:unselected:` selection marks — checkbox
-state, which has no PDF text by definition. That is a correct outcome, not a
-failure.
+The two cells that were once counted against this were Azure `:unselected:`
+selection marks. See below: they are no longer populated cells at all.
+
+### Checkbox markers are state, not text
+
+Azure reports a detected checkbox as the literal content `:selected:` or
+`:unselected:`. On a ruled filing schedule the detector fires on *empty* boxes,
+so the marker is routinely the only "content" a blank cell has — and left in, it
+reaches the reviewer as a value: a column reading `:unselected:` where the
+document shows nothing.
+
+`strip_selection_marks` removes it wherever a cell's text is **chosen**, never
+where Azure's reading is **recorded**. `azure_text` keeps the raw content, so
+the marker stays auditable and the pipeline still discards nothing. A marker
+sitting beside real text (`:selected: Yes`) keeps the text, and the stripped
+form is what the exact-match comparison uses — otherwise a cell the PDF spells
+out as `Yes` would grade `SPATIAL` and report a discrepancy that is not one.
+
+On `nl-1.pdf` this moves two cells from "populated but unmatched" to "empty",
+taking the match rate to 100%: every cell that holds text now resolves to the
+PDF's own bytes.
 
 ### Empty cells are not failures
 
-A filing table is mostly blank grid: `nl-1.pdf` has 714 cells of which 343 hold
+A filing table is mostly blank grid: `nl-1.pdf` has 714 cells of which 195 hold
 nothing at all. `MatchingStats` counts those separately and excludes them from
-`match_rate`, because reporting "52% matched" for an extraction that resolved
-369 of 371 populated cells exactly would destroy trust in the number.
+`match_rate`, because reporting "73% matched" for an extraction that resolved
+every one of its 519 populated cells would destroy trust in the number.
 
 ## Confidence
 

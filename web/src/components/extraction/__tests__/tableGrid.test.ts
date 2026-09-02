@@ -247,10 +247,10 @@ describe('unverifiedCells', () => {
     }
     const cells = [
       makeCell({ row: 0, column: 0, text: 'ok' }),
-      makeCell({ row: 1, column: 0, text: ':unselected:', text_source: azure }),
+      makeCell({ row: 1, column: 0, text: '1,25,000', text_source: azure }),
       // Empty cells are not review work.
       makeCell({ row: 2, column: 0, text: '', text_source: azure }),
     ]
-    expect(unverifiedCells(cells).map((c) => c.text)).toEqual([':unselected:'])
+    expect(unverifiedCells(cells).map((c) => c.text)).toEqual(['1,25,000'])
   })
 })

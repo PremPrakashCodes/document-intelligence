@@ -160,6 +160,23 @@ class TestPages:
         body = (await client.get(f"/documents/{extracted}/pages/1?include=words")).json()
         assert list(body["content"]) == ["words"]
 
+    async def test_blocks_carry_the_lines_the_page_view_rebuilds_from(self, client, extracted):
+        # The full-page view redraws the page from these: every line needs its
+        # own box to be placed, and its spans' size and style flags to be set.
+        body = (await client.get(f"/documents/{extracted}/pages/1?include=blocks")).json()
+        assert list(body["content"]) == ["blocks"]
+        # `text` is its own column, not part of the content blob, so it comes
+        # back regardless of what `include` asked for.
+        assert body["text"]
+
+        text_blocks = [block for block in body["content"]["blocks"] if block["type"] == "text"]
+        assert text_blocks
+        span = text_blocks[0]["lines"][0]["spans"][0]
+        assert len(text_blocks[0]["bbox"]) == 4
+        assert len(text_blocks[0]["lines"][0]["bbox"]) == 4
+        assert span["size"] > 0
+        assert {"text", "font", "flags"} <= set(span)
+
     async def test_include_rejects_unknown_keys(self, client, extracted):
         response = await client.get(f"/documents/{extracted}/pages/1?include=nonsense")
         assert response.status_code == 400
