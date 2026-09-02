@@ -255,10 +255,11 @@ class MatchingStats(CanonicalModel):
     """How well the two sources agreed - the headline audit number.
 
     Empty cells are counted separately and excluded from `match_rate`. A real
-    filing table is mostly blank grid: nl-1.pdf has 714 cells of which 343 hold
-    nothing at all. Counting those as match failures would report a 52% match
-    rate for an extraction that in fact resolved 369 of 371 populated cells
-    exactly - an operator would rightly stop trusting the number.
+    filing table is mostly blank grid: the sample document has 714 cells of
+    which 144 hold nothing at all. Counting those as match failures would
+    report an 80% match rate for an extraction that in fact resolved every one
+    of its 570 populated cells - an operator would rightly stop trusting the
+    number.
     """
 
     total_cells: int = 0

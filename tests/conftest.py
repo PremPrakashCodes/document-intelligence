@@ -24,20 +24,22 @@ from extraction.pymupdf_extractor import PdfExtractor
 from storage.memory import InMemoryDocumentStore
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
-# A real IRDAI NL-1 revenue account: landscape A4, born-digital, two wide
-# financial tables, and the straddling nil-marker dashes the matcher exists to
-# get right.
-SAMPLE_PDF = pathlib.Path(__file__).parents[1] / "nl-1.pdf"
-SAMPLE_LAYOUT = FIXTURES / "nl-1.layout.json"
+# A synthetic revenue account, built by `fixtures/generate_sample.py`: landscape
+# A4, born-digital, two wide financial tables, and the straddling nil-marker
+# dashes the matcher exists to get right. Every name and figure in it is
+# invented; the awkward geometry is not.
+SAMPLE_PDF = FIXTURES / "sample-revenue-account.pdf"
+SAMPLE_LAYOUT = FIXTURES / "sample-revenue-account.layout.json"
 
 
 class ReplayLayoutExtractor:
     """A `LayoutExtractor` that replays a recorded Azure response.
 
-    Recorded from the live `prebuilt-layout` model against nl-1.pdf, so the
-    matcher and normalizer are exercised on genuine service output - real
-    polygons in inches, real per-word confidences, real quirks - rather than
-    on coordinates invented to make the tests pass.
+    The response is generated from the same geometry that renders the sample
+    PDF, so the matcher and normalizer are exercised on a faithful service
+    shape - polygons in inches, per-word confidences, dropped nil dashes and
+    stray checkbox markers - rather than on coordinates bent to make the tests
+    pass. See `fixtures/generate_sample.py`.
     """
 
     model = "prebuilt-layout"
@@ -120,7 +122,7 @@ def pipeline(pdf_extractor, normalizer, sample_layout) -> ExtractionPipeline:
 @pytest_asyncio.fixture
 async def canonical(pipeline, sample_pdf_bytes):
     """The sample document, fully extracted. Session-expensive, so reused."""
-    return await pipeline.run(sample_pdf_bytes, document_id="doc_test", filename="nl-1.pdf")
+    return await pipeline.run(sample_pdf_bytes, document_id="doc_test", filename="sample-revenue-account.pdf")
 
 
 @pytest.fixture

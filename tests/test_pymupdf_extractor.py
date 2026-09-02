@@ -143,7 +143,7 @@ class TestContent:
     def test_reads_document_metadata(self, pdf_extractor, sample_pdf_bytes):
         doc = pdf_extractor.open(sample_pdf_bytes)
         metadata = pdf_extractor.metadata(doc)
-        assert metadata["producer"].startswith("Microsoft")
+        assert metadata["producer"].startswith("Document Intelligence")
         assert "" not in metadata.values()  # empty entries are dropped
         doc.close()
 
@@ -159,13 +159,13 @@ class TestDeterminism:
         first.close()
         second.close()
 
-    def test_real_filing_page_extracts_expected_shape(self, pdf_extractor, sample_pdf_bytes):
+    def test_sample_page_extracts_expected_shape(self, pdf_extractor, sample_pdf_bytes):
         doc = pdf_extractor.open(sample_pdf_bytes)
         page = pdf_extractor.extract_page(doc, 0)
         assert doc.page_count == 1
         # Landscape A4, born-digital.
         assert page.geometry.width > page.geometry.height
-        assert len(page.content.words) == 747
+        assert len(page.content.words) == 713
         assert "REVENUE ACCOUNT" in page.content.text
         doc.close()
 

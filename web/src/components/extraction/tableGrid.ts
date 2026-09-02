@@ -108,7 +108,7 @@ export function tableValues(
  *
  * Derived from Azure's own structure rather than guessed from the values: the
  * stub is everything to the left of the first *spanning* group header. In
- * nl-1.pdf the header row reads `[blank] [Particulars] [Schedule Ref.] [Fire
+ * In the sample document the header row reads `[blank] [Particulars] [Schedule Ref.] [Fire
  * ×4] [Marine ×4] …`, so the first span sits at column 3 and the stub is three
  * columns wide — exactly the columns that must stay pinned when you scroll
  * nineteen columns to the right.

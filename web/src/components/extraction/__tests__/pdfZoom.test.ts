@@ -24,7 +24,7 @@ describe('fitPageScale', () => {
 
 describe('followScale', () => {
   it('makes a small numeric cell genuinely readable', () => {
-    // A real cell from nl-1.pdf: 31pt wide, 7pt tall.
+    // A cell from the sample document: 31pt wide, 7pt tall.
     const scale = followScale([265.3, 154.5, 296.3, 161.9], PANE)
     expect(scale).toBeGreaterThanOrEqual(3)
     // 7pt of type at this scale is >20 CSS px.

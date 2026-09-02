@@ -17,7 +17,8 @@ The threshold is above 0.5 for a specific reason: **a cell grid does not
 overlap, so a word can exceed 50% containment in at most one cell.** The
 membership rule is therefore an exclusive assignment - each word lands in
 exactly one cell, or none - with no tie-break needed and no chance of the same
-word being read into two columns. nl-1.pdf leans on this: its nil markers are
+word being read into two columns. The sample document leans on this: its nil
+markers are
 right-aligned dashes that straddle a column rule, sitting 68% in their own
 column and 32% in the next. The rule puts each one in exactly the right cell.
 
@@ -46,7 +47,7 @@ a ruled filing schedule is full of. See `strip_selection_marks`.
 Why containment and not IoU
 ---------------------------
 IoU between a cell and its text is not a measure of match quality - it is a
-measure of how much padding the cell has. In nl-1.pdf, 148 cells hold a single
+measure of how much padding the cell has. In the sample document, 148 cells hold a single
 "-" (the nil marker) in a 30pt-wide numeric column. Those dashes are genuine
 PDF content that Azure dropped, and every one of them sits perfectly inside its
 cell - yet their IoU is about 0.05. Grading on IoU rejected all 148 and kept
@@ -64,7 +65,7 @@ and that is not laziness. Because membership is already exclusive, a word that
 passed it is unambiguously this cell's word; re-testing the assembled union
 against a *stricter* bar would reject text the first rule just proved belongs
 here. An earlier draft of this module set the cell bar at 0.8 and dropped 148
-straddling dashes on nl-1.pdf, keeping Azure's empty string over real PDF
+straddling dashes on the sample document, keeping Azure's empty string over real PDF
 content. Holding both at the exclusivity bound leaves `WEAK` to catch the one
 case membership cannot: several individually-contained words whose *union* box
 still escapes the cell, which only happens when the cell geometry is wrong.

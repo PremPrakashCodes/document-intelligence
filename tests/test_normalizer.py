@@ -1,4 +1,4 @@
-"""Normalization against the recorded live Azure response for nl-1.pdf."""
+"""Normalization against the generated Azure response for the sample document."""
 
 import pytest
 
@@ -96,11 +96,11 @@ class TestProvenance:
         """The end-to-end quality number, pinned so a regression is visible."""
         stats = canonical.extraction.matching
         assert stats.total_cells == 714
-        # 193 cells neither source read, plus the two whose only Azure content
+        # 142 cells neither source read, plus the two whose only Azure content
         # was a checkbox marker over an empty box.
-        assert stats.empty_cells == 195
-        assert stats.content_cells == 519
-        assert stats.matched_cells == 519
+        assert stats.empty_cells == 144
+        assert stats.content_cells == 570
+        assert stats.matched_cells == 570
         assert stats.unmatched_cells == 0
         assert stats.match_rate == 1.0
 
@@ -166,7 +166,7 @@ class TestDegradation:
             layout_extractor=failing_layout_extractor(AzureRateLimitError("429 from Azure")),
             normalizer=normalizer,
         )
-        doc = await pipeline.run(sample_pdf_bytes, document_id="doc_x", filename="nl-1.pdf")
+        doc = await pipeline.run(sample_pdf_bytes, document_id="doc_x", filename="sample-revenue-account.pdf")
 
         assert doc.document.status is DocumentStatus.PARTIAL
         assert doc.extraction.pymupdf.completed is True
@@ -176,7 +176,7 @@ class TestDegradation:
 
         # Everything deterministic survived; only the tables are missing.
         page = doc.pages[0]
-        assert len(page.content.words) == 747
+        assert len(page.content.words) == 713
         assert page.tables == []
         assert "REVENUE ACCOUNT" in page.content.text
 
@@ -186,7 +186,7 @@ class TestDegradation:
         pipeline = ExtractionPipeline(
             pdf_extractor=pdf_extractor, layout_extractor=None, normalizer=normalizer
         )
-        doc = await pipeline.run(sample_pdf_bytes, document_id="doc_y", filename="nl-1.pdf")
+        doc = await pipeline.run(sample_pdf_bytes, document_id="doc_y", filename="sample-revenue-account.pdf")
         assert doc.document.status is DocumentStatus.PARTIAL
         assert doc.extraction.azure_di.error.code == "azure_not_configured"
         assert doc.pages[0].content.words
@@ -199,7 +199,7 @@ class TestDegradation:
             layout_extractor=failing_layout_extractor(RuntimeError("something unforeseen")),
             normalizer=normalizer,
         )
-        doc = await pipeline.run(sample_pdf_bytes, document_id="doc_z", filename="nl-1.pdf")
+        doc = await pipeline.run(sample_pdf_bytes, document_id="doc_z", filename="sample-revenue-account.pdf")
         assert doc.document.status is DocumentStatus.PARTIAL
         assert doc.extraction.azure_di.error.code == "azure_unexpected_error"
         assert doc.pages[0].content.words
@@ -212,8 +212,8 @@ class TestDegradation:
 
 class TestDeterminism:
     async def test_two_runs_produce_identical_output(self, pipeline, sample_pdf_bytes):
-        first = await pipeline.run(sample_pdf_bytes, document_id="d", filename="nl-1.pdf")
-        second = await pipeline.run(sample_pdf_bytes, document_id="d", filename="nl-1.pdf")
+        first = await pipeline.run(sample_pdf_bytes, document_id="d", filename="sample-revenue-account.pdf")
+        second = await pipeline.run(sample_pdf_bytes, document_id="d", filename="sample-revenue-account.pdf")
         # Wall-clock fields legitimately differ between runs; every extracted
         # value must not.
         exclude = {
@@ -227,8 +227,8 @@ class TestDeterminism:
 
     async def test_pages_and_cells_are_identical_across_runs(self, pipeline, sample_pdf_bytes):
         """The audit guarantee stated plainly: same bytes, same 714 cells."""
-        first = await pipeline.run(sample_pdf_bytes, document_id="d", filename="nl-1.pdf")
-        second = await pipeline.run(sample_pdf_bytes, document_id="d", filename="nl-1.pdf")
+        first = await pipeline.run(sample_pdf_bytes, document_id="d", filename="sample-revenue-account.pdf")
+        second = await pipeline.run(sample_pdf_bytes, document_id="d", filename="sample-revenue-account.pdf")
         assert [p.model_dump_json() for p in first.pages] == [
             p.model_dump_json() for p in second.pages
         ]

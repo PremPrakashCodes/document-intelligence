@@ -137,7 +137,7 @@ describe('clipboard export', () => {
 
 describe('stubColumnCount', () => {
   it('takes the columns before the first group header span', () => {
-    // How nl-1.pdf reads: [blank][Particulars][Schedule Ref.][Fire x4][Marine x4]
+    // How the sample document reads: [blank][Particulars][Schedule Ref.][Fire x4][Marine x4]
     const table = makeTable({
       row_count: 2,
       column_count: 7,

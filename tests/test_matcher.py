@@ -108,7 +108,7 @@ class TestMatchCell:
         assert match.source.word_count == 0
 
     def test_straddling_word_lands_in_exactly_one_cell(self, simple_matcher):
-        """nl-1.pdf's nil markers sit 68/32 across a column rule. Each must be
+        """The sample document's nil markers sit 68/32 across a column rule. Each must be
         read into its own column and not duplicated into the neighbour."""
         dash = word("-", (28.57, 0.63, 30.57, 7.32))
         index = WordIndex([dash])

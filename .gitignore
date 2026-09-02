@@ -16,5 +16,6 @@ wheels/
 node_modules/
 dist/
 
-# Sample PDF (purged from history, keep untracked)
+# The real filing this project was built against. Purged from history; the
+# tests use the synthetic tests/fixtures/sample-revenue-account.pdf instead.
 nl-1.pdf

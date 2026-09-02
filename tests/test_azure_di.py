@@ -183,7 +183,7 @@ class TestLayoutFromSdk:
         page = sample_layout.pages[0]
         assert page.unit == "inch"
         assert (round(page.width, 3), round(page.height, 3)) == (11.681, 8.264)
-        assert len(page.words) == 602
+        assert len(page.words) == 565
         assert len(sample_layout.tables) == 2
         assert (sample_layout.tables[0].row_count, sample_layout.tables[0].column_count) == (29, 19)
 

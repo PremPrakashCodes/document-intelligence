@@ -74,7 +74,7 @@ scale_x = pymupdf_page.width / azure_page.width
 scale_y = pymupdf_page.height / azure_page.height
 ```
 
-Not a hard-coded 72 dpi. For `nl-1.pdf` the factors come out at **72.058** and
+Not a hard-coded 72 dpi. For the sample document the factors come out at **72.058** and
 **72.024** — the service and the mediabox disagree by a fraction of a percent,
 and assuming 72 would misplace the right-hand columns by about a point. Using
 the ratio also makes the conversion unit-agnostic: inches and pixels both work
@@ -94,8 +94,8 @@ still scores a near-zero IoU.
 The threshold is above 0.5 for a specific reason — **a cell grid does not
 overlap, so a word can exceed 50% containment in at most one cell**. Membership
 is therefore an *exclusive assignment*: each word lands in exactly one cell, or
-none, with no tie-break and no chance of being read into two columns. `nl-1.pdf`
-depends on this: its nil markers are right-aligned dashes straddling a column
+none, with no tie-break and no chance of being read into two columns. The sample
+document depends on this: its nil markers are right-aligned dashes straddling a column
 rule at 68% / 32%, and each is placed in exactly the right column.
 
 **Grading.** The words in a cell are joined in PyMuPDF's own `(block, line,
@@ -117,9 +117,9 @@ PDF already spells out.
 
 An earlier version graded on IoU with a 0.35 bar. IoU between a cell and its
 text is not a measure of match quality; it is a measure of how much padding the
-cell has. On `nl-1.pdf`, 148 cells hold a single `-` in a 30pt-wide numeric
-column. Those dashes are real PDF content that Azure dropped, they sit perfectly
-inside their cells, and their IoU is about **0.05**. Grading on IoU rejected all
+cell has. On the sample document, 148 cells hold a single `-` in a 30pt-wide
+numeric column. Those dashes are real PDF content that Azure dropped, they sit
+perfectly inside their cells, and their median IoU is **0.03**. Grading on IoU rejected all
 148 and kept Azure's empty string — silently losing real text and inverting the
 ownership rule this pipeline exists to enforce.
 
@@ -127,13 +127,13 @@ Containment has no such bias: a word wholly inside its cell scores 1.0 whether
 the cell is snug or generously padded. IoU is still computed and reported so a
 reviewer can see the geometry, but it never decides anything.
 
-Measured on `nl-1.pdf`:
+Measured on the sample document:
 
 | grading rule | populated cells matched |
 | --- | --- |
-| IoU ≥ 0.35 | 369 / 521 (70.8%) |
-| containment ≥ 0.8 | 513 / 521 (98.5%) |
-| containment ≥ 0.55 (shipped) | **519 / 519 (100%)** |
+| IoU ≥ 0.35 | 337 / 570 (59.1%) |
+| containment ≥ 0.8 | 422 / 570 (74.0%) |
+| containment ≥ 0.55 (shipped) | **570 / 570 (100%)** |
 
 The two cells that were once counted against this were Azure `:unselected:`
 selection marks. See below: they are no longer populated cells at all.
@@ -153,16 +153,17 @@ sitting beside real text (`:selected: Yes`) keeps the text, and the stripped
 form is what the exact-match comparison uses — otherwise a cell the PDF spells
 out as `Yes` would grade `SPATIAL` and report a discrepancy that is not one.
 
-On `nl-1.pdf` this moves two cells from "populated but unmatched" to "empty",
+On the sample document this moves two cells from "populated but unmatched" to "empty",
 taking the match rate to 100%: every cell that holds text now resolves to the
 PDF's own bytes.
 
 ### Empty cells are not failures
 
-A filing table is mostly blank grid: `nl-1.pdf` has 714 cells of which 195 hold
-nothing at all. `MatchingStats` counts those separately and excludes them from
-`match_rate`, because reporting "73% matched" for an extraction that resolved
-every one of its 519 populated cells would destroy trust in the number.
+A filing table is mostly blank grid: the sample document has 714 cells of which
+144 hold nothing at all. `MatchingStats` counts those separately and excludes
+them from `match_rate`, because reporting "80% matched" for an extraction that
+resolved every one of its 570 populated cells would destroy trust in the
+number.
 
 ## Confidence
 

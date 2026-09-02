@@ -54,7 +54,7 @@ class DocumentNormalizer:
         dpi. That is what makes the conversion unit-agnostic - it works
         identically for Azure's "inch" (PDF input) and "pixel" (image input) -
         and it absorbs the sub-percent disagreement the service has with the
-        PDF's own mediabox. For nl-1.pdf the factors come out at 72.085 and
+        PDF's own mediabox. For the sample document the factors come out at 72.085 and
         71.9999: assuming 72 would misplace the right-hand columns by a point.
 
         Both pages are already upright, so no rotation enters here: PyMuPDF

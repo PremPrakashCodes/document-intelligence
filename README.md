@@ -128,16 +128,16 @@ Two rules are worth knowing before changing anything here.
 origin, rotation already applied. PyMuPDF reports text in the unrotated
 mediabox but renders rotated, so every box goes through `page.rotation_matrix`.
 Azure reports polygons in inches, rescaled by the ratio of the two page sizes
-rather than an assumed 72 dpi (on `nl-1.pdf` the real factors are 72.058 and
-72.024).
+rather than an assumed 72 dpi (on the sample document the factors are 72.058
+and 72.024).
 
 **Matching uses containment, never IoU.** A word belongs to a cell when ≥55% of
 its area falls inside — above 50%, so the assignment is *exclusive* in a
 non-overlapping grid. IoU measures cell padding, not match quality: 148 nil-marker
-dashes in `nl-1.pdf` sit perfectly inside 30pt-wide columns and score an IoU of
-0.05. Grading on IoU discarded all of them in favour of Azure's empty string.
+dashes sit perfectly inside 30pt-wide columns and score a median IoU of 0.03.
+Grading on IoU discarded all of them in favour of Azure's empty string.
 
-On the sample filing: **all 519 populated cells (100%)** resolve against the PDF
+On the sample document: **all 570 populated cells (100%)** resolve against the PDF
 text layer. Azure's `:selected:` / `:unselected:` checkbox markers are stripped
 before a cell's value is chosen — they are state, not text, and the detector
 fires on the empty boxes a ruled schedule is full of — so those cells read as
@@ -183,16 +183,26 @@ just check         # both, plus lint and the production build
 ```
 
 The Python suite needs no network and no Postgres: Azure is replayed from a
-recorded live response (`tests/fixtures/nl-1.layout.json`), storage is
-in-memory, and the database is SQLite through the production models. The
-fixtures are real — `nl-1.pdf` is an actual IRDAI NL-1 revenue account, and the
-Azure response was recorded from the live `prebuilt-layout` model — so the
-matcher is exercised against genuine service output rather than coordinates
-invented to make tests pass.
+generated response (`tests/fixtures/sample-revenue-account.layout.json`),
+storage is in-memory, and the database is SQLite through the production models.
 
-To re-record the Azure fixture after an SDK or model change, run
-`prebuilt-layout` against `nl-1.pdf` with credentials set and write
-`result.as_dict()` to `tests/fixtures/nl-1.layout.json`.
+The sample document is synthetic and generated, not a real filing — every name
+and figure in it is invented. What is *not* invented is the geometry: it is a
+landscape A4 page with two ruled tables, spanning column headers, 148
+right-aligned nil dashes straddling a column rule, and two stray `:unselected:`
+checkbox markers, because those are the properties the matcher exists to handle.
+The layout JSON is derived from the same geometry that renders the PDF, so the
+two genuinely agree.
+
+Regenerate both halves with:
+
+```bash
+uv run python tests/fixtures/generate_sample.py
+```
+
+The output is deterministic, so a re-run is a no-op unless the generator
+changed. Several tests pin measured counts (714 cells, 713 words, a 100% match
+rate); changing the generator means re-running it and updating those numbers.
 
 ## Background jobs
 

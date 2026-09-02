@@ -67,7 +67,7 @@ async def extracted(client, store, pipeline, sample_pdf_bytes, monkeypatch):
     monkeypatch.setattr(processors, "get_pipeline", lambda: pipeline)
 
     response = await client.post(
-        "/documents", files={"file": ("nl-1.pdf", sample_pdf_bytes, "application/pdf")}
+        "/documents", files={"file": ("sample-revenue-account.pdf", sample_pdf_bytes, "application/pdf")}
     )
     assert response.status_code == 202
     document_id = response.json()["id"]
@@ -78,7 +78,7 @@ async def extracted(client, store, pipeline, sample_pdf_bytes, monkeypatch):
 class TestUpload:
     async def test_accepts_a_pdf_and_stores_it(self, client, store, sample_pdf_bytes):
         response = await client.post(
-            "/documents", files={"file": ("nl-1.pdf", sample_pdf_bytes, "application/pdf")}
+            "/documents", files={"file": ("sample-revenue-account.pdf", sample_pdf_bytes, "application/pdf")}
         )
         assert response.status_code == 202
         body = response.json()
@@ -115,7 +115,7 @@ class TestDocument:
         assert body["status"] == "completed"
         assert body["page_count"] == 1
         assert body["table_count"] == 2
-        assert body["metadata"]["producer"].startswith("Microsoft")
+        assert body["metadata"]["producer"].startswith("Document Intelligence")
 
         matching = body["extraction"]["matching"]
         assert matching["total_cells"] == 714
@@ -147,12 +147,12 @@ class TestPages:
         page = body["items"][0]
         assert page["geometry"]["width"] > page["geometry"]["height"]  # landscape
         assert page["table_count"] == 2
-        assert page["text_length"] > 8000
+        assert page["text_length"] > 4000
         assert "content" not in page  # the whole point of the listing
 
     async def test_page_detail_returns_full_content(self, client, extracted):
         body = (await client.get(f"/documents/{extracted}/pages/1")).json()
-        assert len(body["content"]["words"]) == 747
+        assert len(body["content"]["words"]) == 713
         assert set(body["content"]) >= {"blocks", "words", "images", "links", "fonts"}
         assert body["table_ids"] == ["table_1", "table_2"]
 
@@ -306,7 +306,7 @@ class TestWorkerFailures:
         monkeypatch.setattr(processors, "get_pipeline", lambda: degraded)
 
         response = await client.post(
-            "/documents", files={"file": ("nl-1.pdf", sample_pdf_bytes, "application/pdf")}
+            "/documents", files={"file": ("sample-revenue-account.pdf", sample_pdf_bytes, "application/pdf")}
         )
         document_id = response.json()["id"]
         result = await processors.extract_document(FakeJob({"document_id": document_id}))
@@ -319,7 +319,7 @@ class TestWorkerFailures:
         assert body["extraction"]["azure_di"]["error"]["code"] == "azure_timeout"
 
         page = (await client.get(f"/documents/{document_id}/pages/1")).json()
-        assert len(page["content"]["words"]) == 747
+        assert len(page["content"]["words"]) == 713
 
 
 class TestRepositoryPayloads:

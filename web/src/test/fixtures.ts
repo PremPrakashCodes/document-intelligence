@@ -1,4 +1,4 @@
-/** Fixtures shaped like the real nl-1.pdf extraction. */
+/** Fixtures shaped like the sample document extraction. */
 
 import type {
   PageBlock,
