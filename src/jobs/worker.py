@@ -59,6 +59,13 @@ async def run(queue_names: tuple[str, ...]) -> None:
     # close() waits for active jobs to finalize before releasing the connection.
     await asyncio.gather(*(worker.close() for worker in workers))
 
+    # Release the Azure HTTP session and the database pool the handlers used.
+    from api.deps import get_pipeline
+    from db.session import dispose_engine
+
+    await get_pipeline().aclose()
+    await dispose_engine()
+
 
 def main() -> None:
     logging.basicConfig(

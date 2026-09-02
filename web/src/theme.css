@@ -1,0 +1,149 @@
+/**
+ * Theme: an instrument, not a dashboard.
+ *
+ * Kept out of index.css because the shadcn CLI rewrites that file. Imported
+ * after it in main.tsx, so these values win.
+ *
+ * The ground is a cool, blue-shifted neutral — the palette of a microfilm
+ * reader or an engineering drawing table, chosen because this tool is read for
+ * long stretches and pure grey goes lifeless at this density.
+ *
+ * Colour is data here. Emerald and amber mean exactly one thing each and are
+ * never used decoratively, so a coloured pixel anywhere on screen is a claim
+ * about provenance:
+ *
+ *   emerald  the value was confirmed against the PDF's own text layer
+ *   amber    the value is Azure's reading, unconfirmed
+ *   violet   your current selection
+ *
+ * Nothing else in the interface is allowed to be chromatic.
+ */
+
+@import '@fontsource-variable/geist-mono';
+
+:root {
+  --background: oklch(0.986 0.003 250);
+  --foreground: oklch(0.215 0.021 258);
+  --card: oklch(1 0.001 250);
+  --card-foreground: oklch(0.215 0.021 258);
+  --popover: oklch(1 0.001 250);
+  --popover-foreground: oklch(0.215 0.021 258);
+  --primary: oklch(0.33 0.048 259);
+  --primary-foreground: oklch(0.985 0.003 250);
+  --secondary: oklch(0.955 0.007 252);
+  --secondary-foreground: oklch(0.3 0.03 258);
+  --muted: oklch(0.957 0.006 252);
+  --muted-foreground: oklch(0.522 0.018 256);
+  --accent: oklch(0.945 0.011 254);
+  --accent-foreground: oklch(0.3 0.03 258);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.906 0.008 252);
+  --input: oklch(0.906 0.008 252);
+  --ring: oklch(0.62 0.09 262);
+  --radius: 0.5rem;
+
+  /* Provenance. The spine of the whole interface. */
+  --confirmed: oklch(0.62 0.14 158);
+  --confirmed-strong: oklch(0.5 0.13 158);
+  --confirmed-wash: oklch(0.62 0.14 158 / 0.1);
+  --reported: oklch(0.72 0.15 72);
+  --reported-strong: oklch(0.53 0.13 62);
+  --reported-wash: oklch(0.72 0.15 72 / 0.13);
+  --selected: oklch(0.55 0.19 292);
+  --selected-wash: oklch(0.55 0.19 292 / 0.12);
+  --hit: oklch(0.83 0.15 88 / 0.45);
+  --hit-active: oklch(0.8 0.17 82 / 0.75);
+
+  /* A rule lighter than --border, for the grid inside a table. */
+  --grid-rule: oklch(0.918 0.007 252);
+  /* Alternating wash that groups the columns under one Azure header span. */
+  --group-wash: oklch(0.53 0.04 258 / 0.045);
+}
+
+.dark {
+  --background: oklch(0.175 0.013 258);
+  --foreground: oklch(0.94 0.004 250);
+  --card: oklch(0.212 0.015 258);
+  --card-foreground: oklch(0.94 0.004 250);
+  --popover: oklch(0.235 0.016 258);
+  --popover-foreground: oklch(0.94 0.004 250);
+  --primary: oklch(0.88 0.01 252);
+  --primary-foreground: oklch(0.21 0.018 258);
+  --secondary: oklch(0.268 0.016 258);
+  --secondary-foreground: oklch(0.94 0.004 250);
+  --muted: oklch(0.258 0.015 258);
+  --muted-foreground: oklch(0.68 0.014 254);
+  --accent: oklch(0.3 0.018 258);
+  --accent-foreground: oklch(0.94 0.004 250);
+  --destructive: oklch(0.66 0.18 25);
+  --border: oklch(0.315 0.017 258);
+  --input: oklch(0.315 0.017 258);
+  --ring: oklch(0.6 0.09 262);
+
+  --confirmed: oklch(0.74 0.15 160);
+  --confirmed-strong: oklch(0.82 0.14 162);
+  --confirmed-wash: oklch(0.74 0.15 160 / 0.16);
+  --reported: oklch(0.79 0.14 76);
+  --reported-strong: oklch(0.86 0.13 82);
+  --reported-wash: oklch(0.79 0.14 76 / 0.16);
+  --selected: oklch(0.68 0.17 295);
+  --selected-wash: oklch(0.68 0.17 295 / 0.2);
+  --hit: oklch(0.72 0.14 88 / 0.3);
+  --hit-active: oklch(0.78 0.16 84 / 0.5);
+
+  --grid-rule: oklch(0.295 0.016 258);
+  --group-wash: oklch(0.85 0.03 258 / 0.045);
+}
+
+@theme inline {
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, monospace;
+
+  --color-confirmed: var(--confirmed);
+  --color-confirmed-strong: var(--confirmed-strong);
+  --color-confirmed-wash: var(--confirmed-wash);
+  --color-reported: var(--reported);
+  --color-reported-strong: var(--reported-strong);
+  --color-reported-wash: var(--reported-wash);
+  --color-selected: var(--selected);
+  --color-selected-wash: var(--selected-wash);
+  --color-hit: var(--hit);
+  --color-hit-active: var(--hit-active);
+  --color-grid-rule: var(--grid-rule);
+  --color-group-wash: var(--group-wash);
+}
+
+/**
+ * Every figure in this product is data to be compared down a column, so all
+ * numerals are tabular and lining by default. Without this, proportional
+ * digits make a wrong figure in a 19-column table nearly impossible to spot.
+ */
+:root {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1, 'cv11' 1;
+}
+
+/* The document itself is the evidence: never restyle it, but do keep a white
+   page from blowing out against the dark ground. */
+.page-surface {
+  background: white;
+  box-shadow:
+    0 0 0 1px oklch(0 0 0 / 0.08),
+    0 1px 2px oklch(0 0 0 / 0.06),
+    0 8px 24px oklch(0 0 0 / 0.08);
+}
+.dark .page-surface {
+  box-shadow:
+    0 0 0 1px oklch(1 0 0 / 0.14),
+    0 8px 28px oklch(0 0 0 / 0.5);
+}
+
+/* Keyboard focus must always be visible; the ring token carries it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

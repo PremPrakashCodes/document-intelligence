@@ -5,6 +5,8 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 
 import { routeTree } from './routeTree.gen'
 import './index.css'
+// After index.css, which the shadcn CLI owns and rewrites.
+import './theme.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

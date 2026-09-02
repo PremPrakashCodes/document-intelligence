@@ -15,9 +15,10 @@ install:
     uv sync
     cd web && npm install
 
-# First-time setup: .env, dependencies, and local services
+# First-time setup: .env, dependencies, local services, and the schema
 setup: install services-up
     @test -f .env || (cp .env.example .env && echo "Created .env — fill in your credentials")
+    @sleep 2 && just migrate
 
 # --- services ---
 
@@ -61,6 +62,24 @@ dev:
 docs:
     open http://localhost:{{ api_port }}/docs
 
+# --- database ---
+
+# Apply the application schema (documents, pages, tables, cells)
+migrate:
+    uv run alembic upgrade head
+
+# Generate a migration from a change to db/models.py
+migration message:
+    uv run alembic revision --autogenerate -m "{{ message }}"
+
+# Roll back the most recent migration
+migrate-down:
+    uv run alembic downgrade -1
+
+# Current migration revision
+migrate-status:
+    uv run alembic current
+
 # --- queues ---
 
 # Apply the BullMQ Postgres schema (queues also do this lazily on first use)
@@ -71,7 +90,34 @@ queue-migrate:
 queue-counts queue="filings":
     curl -fsS http://localhost:{{ api_port }}/queues/{{ queue }}
 
+# --- documents ---
+
+# Upload a PDF and queue extraction
+upload pdf:
+    curl -fsS -X POST http://localhost:{{ api_port }}/documents \
+      -F "file=@{{ pdf }}" | python3 -m json.tool
+
+# Extraction summary for a document
+document id:
+    curl -fsS http://localhost:{{ api_port }}/documents/{{ id }} | python3 -m json.tool
+
+# Tables extracted from a document
+tables id:
+    curl -fsS http://localhost:{{ api_port }}/documents/{{ id }}/tables | python3 -m json.tool
+
+# Re-run extraction over the stored PDF (after a threshold change, say)
+reextract id:
+    curl -fsS -X POST http://localhost:{{ api_port }}/documents/{{ id }}/extract | python3 -m json.tool
+
 # --- checks ---
+
+# Run the Python test suite
+test *args:
+    uv run pytest {{ args }}
+
+# Run the frontend test suite
+test-web *args:
+    cd web && npm run test -- {{ args }}
 
 # Typecheck and build the frontend
 build:
@@ -82,7 +128,7 @@ lint:
     cd web && npm run lint
 
 # Run every check
-check: lint build
+check: test test-web lint build
 
 # --- maintenance ---
 

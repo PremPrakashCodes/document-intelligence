@@ -4,7 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import get_settings
-from api.routers import health, queues
+from api.deps import get_pipeline
+from api.routers import documents, health, queues
+from db.session import dispose_engine
 from jobs.queues import close_queues
 
 settings = get_settings()
@@ -15,6 +17,9 @@ async def lifespan(app: FastAPI):
     yield
     # Queues open lazily and hold a Postgres connection each.
     await close_queues()
+    # The Azure client holds an aiohttp session; the engine holds a pool.
+    await get_pipeline().aclose()
+    await dispose_engine()
 
 
 app = FastAPI(
@@ -34,3 +39,4 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(queues.router)
+app.include_router(documents.router)

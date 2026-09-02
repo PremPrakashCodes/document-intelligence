@@ -14,8 +14,10 @@ from api.config import get_settings
 # One queue per kind of work. Names are part of the wire format: a worker and
 # the producers must agree on them, so they live here rather than in settings.
 FILINGS = "filings"
+# PDF extraction: PyMuPDF + Azure DI, normalized and persisted.
+DOCUMENTS = "documents"
 
-QUEUE_NAMES = (FILINGS,)
+QUEUE_NAMES = (FILINGS, DOCUMENTS)
 
 _queues: dict[str, Queue] = {}
 
