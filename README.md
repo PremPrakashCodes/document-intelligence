@@ -1,4 +1,4 @@
-# Tracepaper
+# Document Intelligence
 
 Extract tables from any PDF, with every value traceable back to the page it came
 from. Click a cell in the extracted table and see it highlighted in the original

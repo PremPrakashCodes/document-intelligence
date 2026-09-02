@@ -16,7 +16,7 @@ The two extractors do not natively agree on this, so both are converted:
   842x595 - the box would land off-page. `page.rotation_matrix` maps it into
   display space; `rotate_rect` applies it. Rendering (`get_pixmap`) is already
   in display space, so overlays line up with no further calibration.
-* **Azure Document Intelligence** reports 4-point polygons in the units named
+* **Azure DI** reports 4-point polygons in the units named
   by `page.unit` ("inch" for PDFs, "pixel" for images), relative to a page it
   has already turned upright. `polygon_to_bbox` takes the axis-aligned hull and
   `scale_bbox` rescales it by the ratio of the two page sizes, which converts

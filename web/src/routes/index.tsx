@@ -29,7 +29,7 @@ function HomePage() {
           Every number, traced back to the page it came from.
         </h1>
         <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground">
-          Tracepaper reads tables out of any PDF and keeps the receipt. Click a cell and see it
+          Document Intelligence reads tables out of any PDF and keeps the receipt. Click a cell and see it
           highlighted in the original — the exact characters, at the exact coordinates, with the
           source that produced them.
         </p>

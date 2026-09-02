@@ -31,7 +31,7 @@ normalization layer connects them without either overwriting the other.**
 
 ## Why the split
 
-Azure Document Intelligence is good at a thing PDFs cannot tell you: which
+Azure DI is good at a thing PDFs cannot tell you: which
 rectangles on a page form a table, and how that table divides into rows and
 columns. It is *not* the best source for the characters themselves when the PDF
 already contains them — it is reading a rendering of text the file spells out

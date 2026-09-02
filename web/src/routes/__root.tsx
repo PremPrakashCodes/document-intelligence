@@ -46,7 +46,7 @@ function RootComponent() {
       <header className="flex items-center gap-6 border-b bg-card px-4 py-2.5">
         <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <BrandMark />
-          Tracepaper
+          Document Intelligence
         </Link>
         <nav className="flex gap-4">
           <Link

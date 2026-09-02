@@ -1,4 +1,4 @@
-"""Azure Document Intelligence: table structure, layout, and OCR.
+"""Azure DI: table structure, layout, and OCR.
 
 Azure owns what a PDF cannot state about itself - which rectangles form a
 table, how they divide into rows and columns, and what scanned pixels say.
@@ -419,7 +419,7 @@ class AzureDocumentIntelligenceExtractor:
             return layout_from_sdk(result, self._model, attempts=attempt, duration_ms=duration_ms)
 
         # Unreachable: the loop either returns or re-raises on the last attempt.
-        raise last or AzureServiceError("Azure Document Intelligence failed")
+        raise last or AzureServiceError("Azure DI failed")
 
     async def _analyze_once(self, data: bytes):
         from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
@@ -434,7 +434,7 @@ class AzureDocumentIntelligenceExtractor:
                 return await poller.result()
         except TimeoutError as err:
             raise AzureTimeoutError(
-                f"Azure Document Intelligence did not respond within {self._timeout:.0f}s"
+                f"Azure DI did not respond within {self._timeout:.0f}s"
             ) from err
         except Exception as err:
             raise map_azure_error(err) from err
@@ -456,30 +456,30 @@ def map_azure_error(err: Exception) -> ExtractionFailure:
         return err
 
     if isinstance(err, ClientAuthenticationError):
-        return AzureAuthError("Azure Document Intelligence rejected the credentials")
+        return AzureAuthError("Azure DI rejected the credentials")
 
     # Network-level: the request never landed, or the response was cut off.
     if isinstance(err, (ServiceRequestError, ServiceResponseError)):
-        return AzureServiceError(f"Could not reach Azure Document Intelligence: {err}")
+        return AzureServiceError(f"Could not reach Azure DI: {err}")
 
     status = getattr(err, "status_code", None)
     code = getattr(getattr(err, "error", None), "code", None)
     message = getattr(err, "message", None) or str(err)
 
     if status in (401, 403):
-        return AzureAuthError(f"Azure Document Intelligence rejected the credentials: {message}")
+        return AzureAuthError(f"Azure DI rejected the credentials: {message}")
     if status == 429:
-        failure = AzureRateLimitError(f"Azure Document Intelligence rate limit reached: {message}")
+        failure = AzureRateLimitError(f"Azure DI rate limit reached: {message}")
         failure.retry_after = _retry_after(err)
         return failure
     if status == 408 or status == 504:
-        return AzureTimeoutError(f"Azure Document Intelligence timed out: {message}")
+        return AzureTimeoutError(f"Azure DI timed out: {message}")
     if code in _PERMANENT_CODES or (status is not None and 400 <= status < 500 and status != 429):
         return AzureUnsupportedDocumentError(
-            f"Azure Document Intelligence could not process the document: {message}"
+            f"Azure DI could not process the document: {message}"
         )
 
-    failure = AzureServiceError(f"Azure Document Intelligence failed: {message}")
+    failure = AzureServiceError(f"Azure DI failed: {message}")
     failure.retry_after = _retry_after(err)
     return failure
 

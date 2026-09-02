@@ -6,13 +6,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Tracepaper API"
+    app_name: str = "Document Intelligence API"
     debug: bool = False
 
     # Comma-separated list of origins allowed to call the API from a browser.
     cors_origins: str = "http://localhost:5173"
 
-    # --- Azure Document Intelligence ---
+    # --- Azure DI ---
     azure_di_endpoint: str = ""
     azure_di_key: str = ""
     # prebuilt-layout is the table/structure model; prebuilt-read is OCR only.

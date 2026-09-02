@@ -69,7 +69,7 @@ export function ExtractionSourceBadge({
       </TooltipTrigger>
       <TooltipContent className="max-w-72">
         <p className="font-medium">
-          {confirmed ? 'Confirmed against the PDF text layer' : 'From Azure Document Intelligence'}
+          {confirmed ? 'Confirmed against the PDF text layer' : 'From Azure DI'}
         </p>
         {copy ? <p className="mt-1 text-xs opacity-90">{copy.detail}</p> : null}
       </TooltipContent>

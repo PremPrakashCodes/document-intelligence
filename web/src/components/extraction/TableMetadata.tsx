@@ -40,7 +40,7 @@ export function TableMetadata({
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          Azure Document Intelligence found the rows, columns, and cell boundaries.
+          Azure DI found the rows, columns, and cell boundaries.
         </TooltipContent>
       </Tooltip>
 

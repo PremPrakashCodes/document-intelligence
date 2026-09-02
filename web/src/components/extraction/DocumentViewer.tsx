@@ -205,7 +205,7 @@ function PartialBanner({ document }: { document: DocumentDetail }) {
       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
       <p>
         <span className="font-medium">Tables are unavailable for this document.</span> Azure
-        Document Intelligence failed{error ? ` (${error.code})` : ''}, so table structure could not
+        Azure DI failed{error ? ` (${error.code})` : ''}, so table structure could not
         be extracted. Everything PyMuPDF produced — text, coordinates, page geometry, metadata — is
         intact.
       </p>

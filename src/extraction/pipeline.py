@@ -142,7 +142,7 @@ class ExtractionPipeline:
                 model=self._layout.model if self._layout else None,
                 error=ExtractionError(
                     code="azure_not_configured",
-                    message="Azure Document Intelligence is not configured; tables were not extracted",
+                    message="Azure DI is not configured; tables were not extracted",
                     retryable=False,
                 ),
             )

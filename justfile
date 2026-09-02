@@ -1,4 +1,4 @@
-# Insurer Public Disclosure — task runner
+# Document Intelligence — task runner
 # https://just.systems
 
 set dotenv-load := true

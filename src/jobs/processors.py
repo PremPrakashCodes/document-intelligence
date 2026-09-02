@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 async def parse_filing(job: Job) -> dict:
     """Fetch a filing and hand it to the parser.
 
-    Placeholder: the real pipeline (fetch the PDF, Azure Document Intelligence,
+    Placeholder: the real pipeline (fetch the PDF, Azure DI,
     persist the extracted tables) hangs off here.
     """
     source = job.data.get("source_url")
