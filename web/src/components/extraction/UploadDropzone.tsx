@@ -16,7 +16,13 @@ import { cn } from '@/lib/utils'
  * document rather than returning to a list: the reason to upload is to look at
  * the result.
  */
-export function UploadDropzone({ className }: { className?: string }) {
+export function UploadDropzone({
+  className,
+  compact = false,
+}: {
+  className?: string
+  compact?: boolean
+}) {
   const queryClient = useQueryClient()
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -49,6 +55,7 @@ export function UploadDropzone({ className }: { className?: string }) {
   return (
     <div className={className}>
       <div
+        aria-busy={upload.isPending}
         onDragOver={(event) => {
           event.preventDefault()
           setDragging(true)
@@ -60,21 +67,24 @@ export function UploadDropzone({ className }: { className?: string }) {
           accept(event.dataTransfer.files)
         }}
         className={cn(
-          'flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-8 text-center transition-colors',
-          dragging ? 'border-ring bg-accent/60' : 'border-border bg-card',
+          'group flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center transition-all',
+          compact ? 'px-5 py-7' : 'min-h-64 px-6 py-10',
+          dragging
+            ? 'border-ring bg-accent/80 shadow-inner'
+            : 'border-border bg-muted/25 hover:border-ring/60 hover:bg-muted/45',
         )}
       >
-        <FileUp
-          className={cn(
-            'size-5 transition-colors',
-            dragging ? 'text-foreground' : 'text-muted-foreground',
-          )}
-        />
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium">Drop a PDF here</p>
-          <p className="text-xs text-muted-foreground">
-            Scanned or born-digital, up to 64&nbsp;MB
-          </p>
+        <span className="flex size-11 items-center justify-center rounded-xl border bg-card shadow-xs transition-transform group-hover:-translate-y-0.5">
+          <FileUp
+            className={cn(
+              'size-5 transition-colors',
+              dragging ? 'text-foreground' : 'text-muted-foreground',
+            )}
+          />
+        </span>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sm font-medium">Drop your PDF here</p>
+          <p className="text-xs text-muted-foreground">Scanned or digital · PDF only · 64 MB max</p>
         </div>
 
         <input
@@ -92,11 +102,14 @@ export function UploadDropzone({ className }: { className?: string }) {
         >
           {upload.isPending ? (
             <>
-              <Loader2 className="size-3.5 animate-spin" />
+              <Loader2 data-icon="inline-start" className="animate-spin" />
               Uploading
             </>
           ) : (
-            'Choose a file'
+            <>
+              <FileUp data-icon="inline-start" />
+              Browse files
+            </>
           )}
         </Button>
       </div>

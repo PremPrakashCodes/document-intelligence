@@ -1,3 +1,4 @@
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 import type { TableSummary } from '@/lib/types'
 
@@ -23,37 +24,40 @@ export function TableList({
   if (tables.length <= 1) return null
 
   return (
-    <div
-      className={cn('flex items-center gap-1 overflow-x-auto', className)}
-      role="tablist"
-      aria-label="Extracted tables"
-    >
-      {tables.map((table) => {
-        const selected = table.id === selectedId
-        return (
-          <button
-            key={table.id}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            onClick={() => onSelect(table)}
-            className={cn(
-              'flex shrink-0 items-baseline gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors',
-              'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
-              selected
-                ? 'border-selected/50 bg-selected-wash text-foreground'
-                : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
-            )}
-          >
-            <span className="font-medium">
-              {table.caption ?? table.id.replace('table_', 'Table ')}
-            </span>
-            <span className="font-mono text-[10px] opacity-70">
-              {table.row_count}×{table.column_count}
-            </span>
-          </button>
-        )
-      })}
-    </div>
+    <ScrollArea className={cn('h-12 w-full', className)} type="always">
+      <div
+        className="flex w-max min-w-full items-center gap-1 px-2 py-1 pb-3"
+        role="tablist"
+        aria-label="Extracted tables"
+      >
+        {tables.map((table) => {
+          const selected = table.id === selectedId
+          return (
+            <button
+              key={table.id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => onSelect(table)}
+              className={cn(
+                'flex shrink-0 items-baseline gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors',
+                'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
+                selected
+                  ? 'border-selected/50 bg-selected-wash text-foreground'
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+              )}
+            >
+              <span className="font-medium">
+                {table.caption ?? table.id.replace('table_', 'Table ')}
+              </span>
+              <span className="font-mono text-[10px] opacity-70">
+                {table.row_count}×{table.column_count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   )
 }

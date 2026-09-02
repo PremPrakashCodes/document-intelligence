@@ -97,7 +97,7 @@ export function DocumentViewer({
           tables={tables}
           selectedId={selectedTableId}
           onSelect={(table: TableSummary) => setSelectedTableId(table.id)}
-          className="border-b bg-card px-2 py-1"
+          className="border-b bg-card"
         />
       ) : null}
 

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -187,19 +187,6 @@ describe('TableViewer', () => {
       })
       renderViewer({ table })
       expect(screen.getByTestId('mark-low-confidence')).toBeInTheDocument()
-    })
-  })
-
-  describe('sorting', () => {
-    it('orders body rows numerically and leaves the header in place', async () => {
-      const user = userEvent.setup()
-      renderViewer()
-      await user.click(screen.getByLabelText('Sort by For Q1 2026-27'))
-
-      const rows = screen.getAllByRole('row')
-      expect(within(rows[0]).getByText('Particulars')).toBeInTheDocument()
-      // "-" is not a number, so it sinks; 11,149 rises.
-      expect(within(rows[1]).getByText('11,149')).toBeInTheDocument()
     })
   })
 

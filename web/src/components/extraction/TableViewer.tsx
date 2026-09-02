@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Copy } from 'lucide-react'
+import { Copy } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import type { TableCell as CellType, TableDetail } from '@/lib/types'
@@ -15,13 +15,11 @@ import {
   headerRowCount,
   matchesQuery,
   rowValues,
-  sortRowIndices,
   stubColumnCount,
   stubLayout,
   toNumber,
   toTsv,
   unverifiedCells,
-  type SortDirection,
 } from './tableGrid'
 
 /**
@@ -52,7 +50,6 @@ export function TableViewer({
 }) {
   const [query, setQuery] = useState('')
   const [activeMatch, setActiveMatch] = useState(0)
-  const [sort, setSort] = useState<{ column: number; direction: SortDirection } | null>(null)
   const [copied, setCopied] = useState(false)
   const [copiedRow, setCopiedRow] = useState<number | null>(null)
   const [reviewIndex, setReviewIndex] = useState(0)
@@ -76,9 +73,8 @@ export function TableViewer({
   const rowOrder = useMemo(() => {
     const header = Array.from({ length: headerRows }, (_, i) => i)
     const body = Array.from({ length: grid.rows - headerRows }, (_, i) => i + headerRows)
-    if (!sort) return [...header, ...body]
-    return [...header, ...sortRowIndices(body, grid.origins, sort.column, sort.direction)]
-  }, [grid, headerRows, sort])
+    return [...header, ...body]
+  }, [grid.rows, headerRows])
 
   const scrollTo = useCallback((cell: CellType) => {
     scrollRef.current
@@ -255,22 +251,7 @@ export function TableViewer({
                         }
                         isMatch={matchesQuery(cell, query)}
                         isActiveMatch={matches[activeMatch] === cell}
-                        sortDirection={
-                          isHeader && sort?.column === cell.column ? sort.direction : undefined
-                        }
                         onSelect={() => onSelectCell(cell)}
-                        onSort={
-                          isHeader
-                            ? () =>
-                                setSort((current) =>
-                                  current?.column === cell.column && current.direction === 'asc'
-                                    ? { column: cell.column, direction: 'desc' }
-                                    : current?.column === cell.column
-                                      ? null
-                                      : { column: cell.column, direction: 'asc' },
-                                )
-                            : undefined
-                        }
                       />
                     )
                   })}
@@ -296,9 +277,7 @@ function TableCellView({
   selected,
   isMatch,
   isActiveMatch,
-  sortDirection,
   onSelect,
-  onSort,
 }: {
   cell: CellType
   isHeader: boolean
@@ -309,9 +288,7 @@ function TableCellView({
   selected: boolean
   isMatch: boolean
   isActiveMatch: boolean
-  sortDirection?: SortDirection
   onSelect: () => void
-  onSort?: () => void
 }) {
   const numeric = toNumber(cell.text) !== null
   const unverified = cell.text.trim() !== '' && cell.text_source.source === 'azure_di'
@@ -350,23 +327,6 @@ function TableCellView({
     >
       <div className={cn('flex items-start gap-1', numeric && !isHeader && 'justify-end')}>
         <span className="min-w-0 break-words">{cell.text}</span>
-        {isHeader && onSort ? (
-          <button
-            type="button"
-            aria-label={`Sort by ${cell.text || `column ${cell.column + 1}`}`}
-            className="ml-auto shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent focus-visible:opacity-100 focus-visible:outline-1 focus-visible:outline-ring [th:hover_&]:opacity-100"
-            onClick={(event) => {
-              event.stopPropagation()
-              onSort()
-            }}
-          >
-            {sortDirection === 'desc' ? (
-              <ArrowDown className="size-3" />
-            ) : (
-              <ArrowUp className={cn('size-3', sortDirection === undefined && 'opacity-50')} />
-            )}
-          </button>
-        ) : null}
       </div>
 
       {/* Provenance marks: only the exceptions are marked. Decorating all 539

@@ -1,8 +1,8 @@
 /**
  * Turning a flat cell list into a grid, and the copy/search helpers over it.
  *
- * Kept out of the component so the logic that matters — span expansion, search,
- * sorting, TSV export — is testable without rendering anything.
+ * Kept out of the component so the logic that matters — span expansion,
+ * search, and TSV export — is testable without rendering anything.
  */
 
 import type { TableCell, TableDetail } from '@/lib/types'
@@ -68,40 +68,6 @@ export function findMatches(cells: TableCell[], query: string): TableCell[] {
   return cells
     .filter((cell) => matchesQuery(cell, query))
     .sort((a, b) => a.row - b.row || a.column - b.column)
-}
-
-export type SortDirection = 'asc' | 'desc'
-
-/**
- * Order body rows by one column.
- *
- * Numeric-looking values sort numerically: these are financial tables, so
- * "11,149" must not sort between "1" and "2" as a string would. Indian digit
- * grouping, currency prefixes, and the "-" nil marker are all handled;
- * anything else falls back to a locale string compare.
- */
-export function sortRowIndices(
-  bodyRows: number[],
-  origins: (TableCell | null)[][],
-  column: number,
-  direction: SortDirection,
-): number[] {
-  const value = (rowIndex: number) => origins[rowIndex]?.[column]?.text ?? ''
-  const sign = direction === 'asc' ? 1 : -1
-
-  return [...bodyRows].sort((a, b) => {
-    const left = value(a)
-    const right = value(b)
-    const leftNumber = toNumber(left)
-    const rightNumber = toNumber(right)
-
-    if (leftNumber !== null && rightNumber !== null) return sign * (leftNumber - rightNumber)
-    // Blanks and nil markers always sink, whichever way the column is sorted,
-    // so a sort never buries the populated rows under a wall of dashes.
-    if (leftNumber === null && rightNumber !== null) return 1
-    if (leftNumber !== null && rightNumber === null) return -1
-    return sign * left.localeCompare(right)
-  })
 }
 
 export function toNumber(text: string): number | null {

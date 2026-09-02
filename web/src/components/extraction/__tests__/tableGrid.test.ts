@@ -8,7 +8,6 @@ import {
   groupIndexByColumn,
   headerRowCount,
   rowValues,
-  sortRowIndices,
   stubColumnCount,
   stubLayout,
   toNumber,
@@ -108,37 +107,6 @@ describe('toNumber', () => {
 
   it.each(['-', '', '  ', 'Premiums earned (Net)', 'NL-4'])('rejects %s', (input) => {
     expect(toNumber(input)).toBeNull()
-  })
-})
-
-describe('sortRowIndices', () => {
-  const origins = [
-    [makeCell({ text: 'header' })],
-    [makeCell({ text: '11,149' })],
-    [makeCell({ text: '1,25,000' })],
-    [makeCell({ text: '-' })],
-    [makeCell({ text: '566' })],
-  ]
-
-  it('sorts financial values numerically, not as strings', () => {
-    // A string sort would put "1,25,000" before "566".
-    const sorted = sortRowIndices([1, 2, 3, 4], origins, 0, 'asc')
-    expect(sorted.slice(0, 3)).toEqual([4, 1, 2])
-  })
-
-  it('reverses on desc', () => {
-    expect(sortRowIndices([1, 2, 4], origins, 0, 'desc')).toEqual([2, 1, 4])
-  })
-
-  it('sinks nil markers whichever way the column is sorted', () => {
-    expect(sortRowIndices([1, 2, 3, 4], origins, 0, 'asc').at(-1)).toBe(3)
-    expect(sortRowIndices([1, 2, 3, 4], origins, 0, 'desc').at(-1)).toBe(3)
-  })
-
-  it('does not mutate the input order', () => {
-    const rows = [1, 2, 3, 4]
-    sortRowIndices(rows, origins, 0, 'asc')
-    expect(rows).toEqual([1, 2, 3, 4])
   })
 })
 

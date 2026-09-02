@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft, ExternalLink, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DocumentViewer, DocumentViewerSkeleton } from '@/components/extraction/DocumentViewer'
+import { DocumentStatusBadge } from '@/components/extraction/DocumentStatusBadge'
 import { api } from '@/lib/api'
 import { documentKeys, documentQuery } from '@/lib/queries'
 import { formatRate } from '@/lib/utils'
@@ -31,18 +32,25 @@ function DocumentPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-b bg-card px-3 py-1.5">
-        <Button variant="ghost" size="icon" className="size-7 shrink-0" asChild>
+      <header className="flex min-h-14 items-center gap-3 border-b bg-card px-3 py-2 sm:px-5">
+        <Button variant="ghost" size="icon-sm" asChild>
           <Link to="/documents" aria-label="Back to documents">
-            <ArrowLeft className="size-4" />
+            <ArrowLeft />
           </Link>
         </Button>
 
-        <h1 className="min-w-0 truncate text-sm font-medium">{document.filename}</h1>
+        <div className="min-w-0">
+          <p className="hidden text-[11px] text-muted-foreground sm:block">Documents / Review</p>
+          <h1 className="truncate text-sm font-medium">{document.filename}</h1>
+        </div>
 
-        <span className="hidden shrink-0 font-mono text-[11px] text-muted-foreground sm:inline">
+        <span className="hidden shrink-0 font-mono text-[11px] text-muted-foreground md:inline">
           {document.page_count} page{document.page_count === 1 ? '' : 's'} · {document.table_count}{' '}
           table{document.table_count === 1 ? '' : 's'}
+        </span>
+
+        <span className="hidden sm:inline-flex">
+          <DocumentStatusBadge status={document.status} />
         </span>
 
         {matching && matching.content_cells > 0 ? (
@@ -69,10 +77,10 @@ function DocumentPage() {
           </Tooltip>
         ) : null}
 
-        <Button variant="ghost" size="sm" className="ml-auto shrink-0 gap-1.5 text-xs" asChild>
+        <Button variant="outline" size="sm" className="ml-auto" asChild>
           <a href={api.fileUrl(document.id)} target="_blank" rel="noreferrer">
             Original PDF
-            <ExternalLink className="size-3" />
+            <ExternalLink data-icon="inline-end" />
           </a>
         </Button>
       </header>
