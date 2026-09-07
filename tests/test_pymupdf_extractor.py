@@ -71,6 +71,21 @@ def make_overflowing_columns_pdf() -> bytes:
     return doc.tobytes()
 
 
+def make_clip_case_pdf(clips: list[tuple[float, float, float, float]]) -> bytes:
+    """The three-column page again, with an arbitrary clip per run.
+
+    Used to push clip geometry past anything the sample filings contain: a clip
+    that misses its run entirely, one with no width, one bigger than the page.
+    """
+    doc = pymupdf.open()
+    page = doc.new_page(width=300, height=200)
+    for x, label in ((22.0, "Total Health"), (41.5, "Public/ Product Liability"), (92.0, "Engineering")):
+        page.insert_text((x, 100), label, fontsize=6)
+    for rect, xref in zip(clips, page.get_contents()):
+        doc.update_stream(xref, b"q %g %g %g %g re W n" % rect + doc.xref_stream(xref) + b"Q\n")
+    return doc.tobytes()
+
+
 class TestOpen:
     def test_rejects_non_pdf_bytes(self, pdf_extractor):
         with pytest.raises(InvalidPdfError) as err:
@@ -275,6 +290,66 @@ class TestClippedText:
         assert [w.text for w in extracted.content.words] == ["ONPAGE"]
         assert "OFFPAGE" not in extracted.content.text
         opened.close()
+
+
+
+class TestClipGeometry:
+    """Clipping must never cost text, whatever shape the clip is.
+
+    Losing a glyph is the one outcome with no recovery: a box that is merely
+    imprecise still carries its text into some cell, and a reviewer can see it.
+    """
+
+    WORDS = ("Total", "Health", "Public/", "Product", "Liability", "Engineering")
+    COLUMNS = [(20.0, 90.0, 35.0, 20.0), (55.0, 90.0, 35.0, 20.0), (90.0, 90.0, 35.0, 20.0)]
+
+    @pytest.mark.parametrize(
+        ("name", "clips"),
+        [
+            ("per-column, as a print driver writes them", COLUMNS),
+            ("a clip that misses its run entirely", [COLUMNS[0], (200.0, 90.0, 35.0, 20.0), COLUMNS[2]]),
+            ("a clip band above the text", [COLUMNS[0], (55.0, 130.0, 35.0, 20.0), COLUMNS[2]]),
+            ("a clip that cuts the baseline", [COLUMNS[0], (55.0, 98.0, 35.0, 20.0), COLUMNS[2]]),
+            ("a clip with no width at all", [COLUMNS[0], (55.0, 90.0, 0.0, 20.0), COLUMNS[2]]),
+            ("a clip larger than the page", [COLUMNS[0], (-500.0, 90.0, 2000.0, 20.0), COLUMNS[2]]),
+        ],
+    )
+    def test_no_clip_shape_loses_text(self, pdf_extractor, name, clips):
+        doc = pdf_extractor.open(make_clip_case_pdf(clips))
+        page = pdf_extractor.extract_page(doc, 0)
+        found = " ".join(w.text for w in page.content.words)
+        assert all(word in found for word in self.WORDS), f"{name} lost text: {found!r}"
+        for w in page.content.words:
+            box = BBox(*w.bbox)
+            assert 0 <= box.x0 <= box.x1 <= page.geometry.width
+            assert 0 <= box.y0 <= box.y1 <= page.geometry.height
+        doc.close()
+
+    def test_a_completely_hidden_word_keeps_the_box_it_was_drawn_at(self, pdf_extractor):
+        """The fallback, stated out loud: there is nothing better to say about
+        where an invisible word is, and dropping it would lose text."""
+        clips = [self.COLUMNS[0], (200.0, 90.0, 35.0, 20.0), self.COLUMNS[2]]
+        doc = pdf_extractor.open(make_clip_case_pdf(clips))
+        boxes = {w.text: BBox(*w.bbox) for w in pdf_extractor.extract_page(doc, 0).content.words}
+        assert boxes["Liability"].x1 == pytest.approx(103.52, abs=0.05)
+        doc.close()
+
+    @pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+    def test_the_shown_box_survives_rotation(self, pdf_extractor, rotation):
+        """The glyph join happens before the rotation transform, so both passes
+        agree; this pins that the two do not drift apart."""
+        doc = pymupdf.open("pdf", make_clip_case_pdf(self.COLUMNS))
+        doc[0].set_rotation(rotation)
+        opened = pdf_extractor.open(doc.tobytes())
+        page = pdf_extractor.extract_page(opened, 0)
+        found = " ".join(w.text for w in page.content.words)
+        assert all(word in found for word in self.WORDS)
+        for w in page.content.words:
+            box = BBox(*w.bbox)
+            assert 0 <= box.x0 <= box.x1 <= page.geometry.width
+            assert 0 <= box.y0 <= box.y1 <= page.geometry.height
+        opened.close()
+        doc.close()
 
 
 class TestDeterminism:
