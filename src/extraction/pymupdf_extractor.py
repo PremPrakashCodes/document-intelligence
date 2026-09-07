@@ -13,10 +13,13 @@ Three invariants matter:
 2. **Determinism.** No heuristics beyond the documented scanned-page
    threshold, and no ordering that depends on dict iteration - the same bytes
    always produce byte-identical canonical output.
-3. **Clip paths do not censor text.** MuPDF crops extracted text to the page's
-   clip paths by default, which truncates every label a spreadsheet overflowed
-   past its column. Extraction runs with that off, so the text layer is what
-   the PDF says rather than what it happens to show. See `_TEXT_FLAGS`.
+3. **Clip paths place text; they do not censor it.** MuPDF crops extracted
+   text to the page's clip paths by default, which truncates every label a
+   spreadsheet overflowed past its column. Extraction runs with that off, so
+   the text layer is what the PDF says rather than what it happens to show -
+   but the clip is still read, because *where* a run is shown is what says
+   which cell owns it. A word therefore carries all of its text and only the
+   box it is visible in. See `_TEXT_FLAGS` and `_WORD_FLAGS`.
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ from collections.abc import Sequence
 import pymupdf
 
 from extraction.errors import EmptyPdfError, EncryptedPdfError, InvalidPdfError
-from extraction.geometry import BBox, clamp_bbox, normalize_bbox, rotate_rect
+from extraction.geometry import BBox, clamp_bbox, normalize_bbox, rotate_rect, union_bbox
 from extraction.types import (
     Annotation,
     Block,
@@ -59,11 +62,41 @@ _BLOCK_IMAGE = 1
 #
 # The flag does not gate off-page text: MuPDF discards anything drawn outside
 # the mediabox either way, so the only thing this changes is text a clip path
-# was hiding. Every box produced under these flags is still clamped to the
-# page by `_box`, so an overlay can never be pushed off-canvas.
+# was hiding.
 _TEXT_FLAGS = pymupdf.TEXTFLAGS_TEXT & ~pymupdf.TEXT_CLIP
 _DICT_FLAGS = pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_CLIP
-_WORD_FLAGS = pymupdf.TEXTFLAGS_WORDS & ~pymupdf.TEXT_CLIP
+
+# Words are extracted twice, and the two passes answer different questions.
+#
+# `_WORD_FLAGS` (unclipped) answers *what the word says*. `_SHOWN_WORD_FLAGS`
+# (clipped, MuPDF's default) answers *where it is shown* - which is the same
+# question as "whose cell is it in", because the clip rectangle a spreadsheet
+# puts around a label is that label's column. `_words` joins them: full text,
+# shown box. Without the second pass a run wide enough to overflow scatters its
+# own words across three columns - page 6 of the sample filing draws
+# "Public/ Product Liability" centred on a 35pt column, and area containment
+# alone hands "Public/" to the column on the left, keeps "Product", and gives
+# "Liability" to the column on the right. The clip says all three are one
+# column's, and the clip is the PDF author speaking.
+#
+# Both passes ask for `rawdict`, and the join is made on individual glyphs,
+# because a glyph is the only unit MuPDF will not rearrange. Clipping never
+# moves or crops a glyph - it drops the ones that fall outside - so a glyph
+# that survives is at the same origin in both passes, and a word's shown box is
+# the union of its own surviving glyphs. Nothing coarser holds: asked for the
+# clipped page, MuPDF will merge two runs whose fragments end up adjacent into
+# a single word *and* a single span, even under `PRESERVE_SPANS`, so
+# "Health" and the surviving "c/" of "Public/" come back fused as "Healthc/"
+# and there is no fragment left to attribute to either run.
+#
+# The unclipped pass keeps `PRESERVE_SPANS` for the same reason in reverse:
+# without it MuPDF merges two runs that touch into one span, and `_words`
+# splits words at span boundaries, so the run boundary has to survive that far.
+# A run is one `Tj`, one thing the PDF drew in one go, and it is the honest
+# place to stop merging - a word broken across runs by kerning is a single run
+# per fragment only in theory, and in practice never overlaps its neighbour.
+_WORD_FLAGS = (pymupdf.TEXTFLAGS_RAWDICT & ~pymupdf.TEXT_CLIP) | pymupdf.TEXT_PRESERVE_SPANS
+_SHOWN_WORD_FLAGS = pymupdf.TEXTFLAGS_RAWDICT
 
 _LINK_KINDS = {
     pymupdf.LINK_NONE: "none",
@@ -73,6 +106,51 @@ _LINK_KINDS = {
     pymupdf.LINK_NAMED: "named",
     pymupdf.LINK_GOTOR: "gotor",
 }
+
+
+def _glyph_key(char: dict) -> tuple[float, float, str]:
+    """Identity of one drawn glyph: what it is and where it was put.
+
+    Rounded to a hundredth of a point, far below the tolerance anything else
+    here works at, so the same glyph reported by two passes always agrees.
+    """
+    origin = char["origin"]
+    return (round(origin[0], 2), round(origin[1], 2), char["c"])
+
+
+def _shown_glyphs(page: pymupdf.Page) -> set[tuple[float, float, str]]:
+    """Every glyph the page's clip paths actually leave visible."""
+    return {
+        _glyph_key(char)
+        for block in page.get_text("rawdict", flags=_SHOWN_WORD_FLAGS)["blocks"]
+        if block["type"] == _BLOCK_TEXT
+        for line in block.get("lines", [])
+        for span in line["spans"]
+        for char in span["chars"]
+    }
+
+
+def _span_words(chars: Sequence[dict]) -> list[list[dict]]:
+    """A run's glyphs grouped into words, split on whitespace.
+
+    Words are built per run rather than taken from `get_text("words")` because
+    that splits on whitespace *alone*: two runs that touch with no space
+    between them - two overflowing column headers, or a label and its
+    superscript footnote marker - come back as one word, which is then assigned
+    to one cell whole. A word never spans two runs, so this cannot happen here.
+    """
+    words: list[list[dict]] = []
+    current: list[dict] = []
+    for char in chars:
+        if char["c"].isspace():
+            if current:
+                words.append(current)
+                current = []
+            continue
+        current.append(char)
+    if current:
+        words.append(current)
+    return words
 
 
 class PdfExtractor:
@@ -207,18 +285,47 @@ class PdfExtractor:
     def _words(self, page: pymupdf.Page, matrix: Sequence[float], width: float, height: float) -> list[Word]:
         """Word-level boxes - the unit the table matcher works in.
 
-        `get_text("words")` yields `(x0, y0, x1, y1, text, block, line, word)`.
+        Each word takes its *text* from every glyph the run drew and its *box*
+        from the glyphs the page actually shows, so `text` is the whole of what
+        the word says and `bbox` is the part of it a reader can see. The two
+        differ exactly when a PDF draws a label wider than the cell it belongs
+        to, and both consumers want the shown box: the matcher, because the
+        clip is what says which cell the word is in, and the overlay, because a
+        highlight belongs on visible glyphs.
+
+        A word hidden completely keeps the box the PDF drew it at. There is
+        nothing better to say about where it is, and it is the reading the
+        earlier, clip-respecting extraction would have thrown away entirely.
         """
-        return [
-            Word(
-                text=raw[4],
-                bbox=self._box(raw[:4], matrix, width, height).as_tuple(),
-                block=raw[5],
-                line=raw[6],
-                word=raw[7],
-            )
-            for raw in page.get_text("words", flags=_WORD_FLAGS)
-        ]
+        shown = _shown_glyphs(page)
+        words: list[Word] = []
+
+        for block in page.get_text("rawdict", flags=_WORD_FLAGS)["blocks"]:
+            if block["type"] != _BLOCK_TEXT:
+                continue
+            for line_number, line in enumerate(block.get("lines", [])):
+                # Numbered across the line, not the run, to match the (block,
+                # line, word) reading order MuPDF's own `words` output uses.
+                word_number = 0
+                for span in line["spans"]:
+                    for chars in _span_words(span["chars"]):
+                        visible = [c["bbox"] for c in chars if _glyph_key(c) in shown]
+                        box = union_bbox(
+                            [normalize_bbox(b) for b in (visible or [c["bbox"] for c in chars])]
+                        )
+                        if box is None:
+                            continue
+                        words.append(
+                            Word(
+                                text="".join(c["c"] for c in chars),
+                                bbox=self._box(box, matrix, width, height).as_tuple(),
+                                block=block["number"],
+                                line=line_number,
+                                word=word_number,
+                            )
+                        )
+                        word_number += 1
+        return words
 
     def _images(
         self,

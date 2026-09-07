@@ -90,9 +90,17 @@ class Block(CanonicalModel):
 
 
 class Word(CanonicalModel):
-    """A whitespace-delimited word with its own box - the matcher's atom."""
+    """A word from one text run, with the box the page shows it in.
+
+    `text` is everything the run spells; `bbox` covers only the part a clip
+    path leaves visible. They differ exactly when a PDF draws a label wider
+    than the cell it belongs to, and both readings are wanted: the text because
+    it is what the document says, the box because it is what says where the
+    text belongs. See `_shown_box` in `pymupdf_extractor`.
+    """
 
     text: str
+    # The shown extent, which on a clipped word is narrower than `text` needs.
     bbox: BBoxTuple
     block: int
     line: int
