@@ -20,6 +20,22 @@ def make_pdf(*, rotation: int = 0, text: str = "Policy Number POL-10234", pages:
     return doc.tobytes()
 
 
+def make_clipped_pdf(text: str = "FORM NL-39", *, clip_x: float = 45.0) -> bytes:
+    """A page whose text is drawn in full and then cropped by a clip path.
+
+    This is what Excel's "Print to PDF" does to a label wider than its column:
+    the glyphs are all in the content stream, and a clip rectangle hides the
+    ones that overflow. Rendering shows the crop; the text layer should not.
+    """
+    doc = pymupdf.open()
+    page = doc.new_page(width=300, height=200)
+    page.insert_text((20, 100), text, fontsize=12)
+    xref = page.get_contents()[0]
+    body = doc.xref_stream(xref)
+    doc.update_stream(xref, b"q %g 0 300 200 re W n " % clip_x + body + b" Q")
+    return doc.tobytes()
+
+
 class TestOpen:
     def test_rejects_non_pdf_bytes(self, pdf_extractor):
         with pytest.raises(InvalidPdfError) as err:
@@ -146,6 +162,42 @@ class TestContent:
         assert metadata["producer"].startswith("Document Intelligence")
         assert "" not in metadata.values()  # empty entries are dropped
         doc.close()
+
+
+
+class TestClippedText:
+    """A clip path hides text from a renderer; it must not hide it from us."""
+
+    def test_recovers_characters_a_clip_path_crops(self, pdf_extractor):
+        doc = pdf_extractor.open(make_clipped_pdf())
+        page = pdf_extractor.extract_page(doc, 0)
+        assert page.content.text.strip() == "FORM NL-39"
+        assert [w.text for w in page.content.words] == ["FORM", "NL-39"]
+        spans = page.content.blocks[0].lines[0].spans
+        assert "".join(s.text for s in spans).strip() == "FORM NL-39"
+        doc.close()
+
+    def test_the_fixture_really_is_clipped(self, pdf_extractor):
+        """Without this, the test above would pass on a PDF with no clip at
+        all and prove nothing."""
+        doc = pymupdf.open("pdf", make_clipped_pdf())
+        assert doc[0].get_text("text").strip() == "M NL-39"
+        doc.close()
+
+    def test_still_ignores_text_drawn_off_the_page(self, pdf_extractor):
+        """Dropping the clip flag also drops MuPDF's mediabox clip in name.
+        It does not in effect - off-page text stays out, so a bbox is never
+        clamped onto the page edge from somewhere it was never drawn."""
+        doc = pymupdf.open()
+        page = doc.new_page(width=200, height=200)
+        page.insert_text((20, 50), "ONPAGE", fontsize=11)
+        page.insert_text((-400, 50), "OFFPAGE", fontsize=11)
+
+        opened = pdf_extractor.open(doc.tobytes())
+        extracted = pdf_extractor.extract_page(opened, 0)
+        assert [w.text for w in extracted.content.words] == ["ONPAGE"]
+        assert "OFFPAGE" not in extracted.content.text
+        opened.close()
 
 
 class TestDeterminism:

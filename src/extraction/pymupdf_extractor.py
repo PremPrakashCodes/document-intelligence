@@ -4,7 +4,7 @@ This module owns everything a PDF can state about itself - metadata, page
 geometry, exact text and its coordinates, images, links, annotations, fonts.
 Azure DI never overrides any of it.
 
-Two invariants matter:
+Three invariants matter:
 
 1. **Display space.** PyMuPDF reports text in the unrotated mediabox space but
    renders in the rotated space. Every box produced here is pushed through
@@ -13,6 +13,10 @@ Two invariants matter:
 2. **Determinism.** No heuristics beyond the documented scanned-page
    threshold, and no ordering that depends on dict iteration - the same bytes
    always produce byte-identical canonical output.
+3. **Clip paths do not censor text.** MuPDF crops extracted text to the page's
+   clip paths by default, which truncates every label a spreadsheet overflowed
+   past its column. Extraction runs with that off, so the text layer is what
+   the PDF says rather than what it happens to show. See `_TEXT_FLAGS`.
 """
 
 from __future__ import annotations
@@ -43,6 +47,23 @@ log = logging.getLogger(__name__)
 # PyMuPDF block type codes from `get_text("dict")`.
 _BLOCK_TEXT = 0
 _BLOCK_IMAGE = 1
+
+# MuPDF applies the page's *clip paths* to extracted text by default. That is
+# right for a rendering device and wrong for a text layer: a spreadsheet
+# printed to PDF gives every cell its own clip rectangle, so a label wider than
+# its column is drawn in full and then cropped. The characters are in the
+# content stream - "FORM NL-39- AGEING OF CLAIMS" - but the default flags hand
+# back "RM NL-39- AGEING OF CLAIMS", and Azure DI, which reads the rendered
+# page, agrees with the crop. Dropping the flag recovers what the PDF actually
+# says, which is the whole point of running PyMuPDF at all.
+#
+# The flag does not gate off-page text: MuPDF discards anything drawn outside
+# the mediabox either way, so the only thing this changes is text a clip path
+# was hiding. Every box produced under these flags is still clamped to the
+# page by `_box`, so an overlay can never be pushed off-canvas.
+_TEXT_FLAGS = pymupdf.TEXTFLAGS_TEXT & ~pymupdf.TEXT_CLIP
+_DICT_FLAGS = pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_CLIP
+_WORD_FLAGS = pymupdf.TEXTFLAGS_WORDS & ~pymupdf.TEXT_CLIP
 
 _LINK_KINDS = {
     pymupdf.LINK_NONE: "none",
@@ -115,7 +136,7 @@ class PdfExtractor:
             mediabox=normalize_bbox(tuple(page.mediabox)).rounded().as_tuple(),
         )
 
-        text = page.get_text("text")
+        text = page.get_text("text", flags=_TEXT_FLAGS)
         blocks, images_in_blocks = self._blocks(page, matrix, width, height)
         content = PageContent(
             text=text,
@@ -152,7 +173,7 @@ class PdfExtractor:
         blocks: list[Block] = []
         image_boxes: dict[int, BBox] = {}
 
-        for raw_block in page.get_text("dict")["blocks"]:
+        for raw_block in page.get_text("dict", flags=_DICT_FLAGS)["blocks"]:
             number = raw_block["number"]
             box = self._box(raw_block["bbox"], matrix, width, height)
 
@@ -196,7 +217,7 @@ class PdfExtractor:
                 line=raw[6],
                 word=raw[7],
             )
-            for raw in page.get_text("words")
+            for raw in page.get_text("words", flags=_WORD_FLAGS)
         ]
 
     def _images(
