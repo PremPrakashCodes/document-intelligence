@@ -20,12 +20,17 @@ the dev database is never touched.
         cd web && VITE_API_URL=http://127.0.0.1:8001 npx vite --port 5199
         node scripts/screenshots/capture.mjs               # needs playwright
 """
-import asyncio, hashlib, json, pathlib, sys
+import asyncio
+import hashlib
+import json
+import pathlib
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 import os
+
 os.environ["DATABASE_URL"] = "postgresql://postgres:password@localhost:5432/demo"
 os.environ["R2_ACCESS_KEY_ID"] = ""
 os.environ["R2_SECRET_ACCESS_KEY"] = ""
@@ -33,6 +38,7 @@ os.environ["R2_BUCKET_NAME"] = ""
 os.environ["CORS_ORIGINS"] = "http://localhost:5199,http://127.0.0.1:5199"
 
 from azure.ai.documentintelligence.models import AnalyzeResult
+
 from api.config import Settings, get_settings
 from api.deps import get_store
 from api.main import app
